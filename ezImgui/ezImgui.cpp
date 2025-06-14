@@ -3,8 +3,6 @@
 
 namespace ez {
 
-    int testInt = 0;
-
     Window::Window(const char* title_, ImVec2 size_, ImGuiWindowFlags flags_, bool autoshow_)
         : title(title_), size(size_), flags(flags_), autoshow(autoshow_) {
     }
@@ -13,14 +11,14 @@ namespace ez {
         return std::make_shared<Window>(title, size, flags, autoshow);
     }
 
-    void ez::LoadFont(const std::string& name, const char* path, float size) {
+    void LoadFont(const std::string& name, const char* path, float size) {
         ImGuiIO& io = ImGui::GetIO();
         ImFont* font = io.Fonts->AddFontFromFileTTF(path, size);
         if (font)
             fonts[name] = font;
     }
 
-    void ez::SetFont(const std::string& name) {
+    void SetFont(const std::string& name) {
         if (fonts.contains(name)) {
             currentFontName = name;
             ImGui::PushFont(fonts[name]);
@@ -50,64 +48,74 @@ namespace ez {
         return tab;
     }
 
-    void Tabbox::AddToggle(const char* label, bool* value) {
-        checkboxes.emplace_back(label, value);
-    }
-
-    void Tabbox::AddSlider(const char* label, float* value, float min, float max) {
-        sliders.emplace_back(label, value, min, max);
-    }
-
-    void Tabbox::AddColorPicker(const char* label, ImVec4* color) {
-        colorPickers.emplace_back(label, color);
-    }
-
-    void Tabbox::AddLabel(const char* label) {
-        labels.emplace_back(label);
-    }
-
-    void Tabbox::RenderExtras() {
-        for (auto& [label, value] : checkboxes)
-            ImGui::Checkbox(label.c_str(), value);
-
-        for (auto& [label, value, min, max] : sliders)
-            ImGui::SliderFloat(label.c_str(), value, min, max);
-
-        for (auto& [label, color] : colorPickers)
-            ImGui::ColorEdit4(label.c_str(), (float*)color, ImGuiColorEditFlags_NoInputs);
-
-        for (int i = 0; i < labels.size(); i++)
-            ImGui::Text(labels[i].c_str());
-    }
-
     void TabboxTab::AddToggle(const char* label, bool* value) {
-        checkboxes.emplace_back(label, value);
+        elements.emplace_back(label, value);
     }
 
     void TabboxTab::AddSlider(const char* label, float* value, float min, float max) {
-        sliders.emplace_back(label, value, min, max);
+        elements.emplace_back(label, value, min, max);
     }
 
     void TabboxTab::AddColorPicker(const char* label, ImVec4* color) {
-        colorPickers.emplace_back(label, color);
+        elements.emplace_back(label, color);
     }
 
     void TabboxTab::AddLabel(const char* label) {
-        labels.emplace_back(label);
+        elements.emplace_back(label);
+    }
+
+    void Tabbox::AddToggle(const char* label, bool* value) {
+        elements.emplace_back(label, value);
+    }
+
+    void Tabbox::AddSlider(const char* label, float* value, float min, float max) {
+        elements.emplace_back(label, value, min, max);
+    }
+
+    void Tabbox::AddColorPicker(const char* label, ImVec4* color) {
+        elements.emplace_back(label, color);
+    }
+
+    void Tabbox::AddLabel(const char* label) {
+        elements.emplace_back(label);
     }
 
     void TabboxTab::Render() {
-        for (auto& [label, value] : checkboxes)
-            ImGui::Checkbox(label.c_str(), value);
+        for (const auto& e : elements) {
+            switch (e.type) {
+            case ElementType::Toggle:
+                ImGui::Checkbox(e.label.c_str(), e.boolValue);
+                break;
+            case ElementType::Slider:
+                ImGui::SliderFloat(e.label.c_str(), e.value, e.min, e.max);
+                break;
+            case ElementType::ColorPicker:
+                ImGui::ColorEdit4(e.label.c_str(), (float*)e.colorValue, ImGuiColorEditFlags_NoInputs);
+                break;
+            case ElementType::Label:
+                ImGui::Text("%s", e.label.c_str());
+                break;
+            }
+        }
+    }
 
-        for (auto& [label, value, min, max] : sliders)
-            ImGui::SliderFloat(label.c_str(), value, min, max);
-
-        for (auto& [label, color] : colorPickers)
-            ImGui::ColorEdit4(label.c_str(), (float*)color);
-
-        for (int i = 0; i < labels.size(); i++)
-            ImGui::Text(labels[i].c_str());
+    void Tabbox::RenderExtras() {
+        for (const auto& e : elements) {
+            switch (e.type) {
+            case ElementType::Toggle:
+                ImGui::Checkbox(e.label.c_str(), e.boolValue);
+                break;
+            case ElementType::Slider:
+                ImGui::SliderFloat(e.label.c_str(), e.value, e.min, e.max);
+                break;
+            case ElementType::ColorPicker:
+                ImGui::ColorEdit4(e.label.c_str(), (float*)e.colorValue, ImGuiColorEditFlags_NoInputs);
+                break;
+            case ElementType::Label:
+                ImGui::Text("%s", e.label.c_str());
+                break;
+            }
+        }
     }
 
     void Window::Render() {
@@ -128,11 +136,9 @@ namespace ez {
         }
 
         ImVec2 contentSize = ImVec2(size.x - 15, size.y - 60);
-
         ImGui::BeginChild("##MainFrame", contentSize, true);
         {
             auto& tab = tabs[currentTab];
-
             ImGui::Columns(2, nullptr, false);
             static std::unordered_map<std::string, int> tabboxStates;
 
@@ -140,8 +146,6 @@ namespace ez {
                 TabboxSide currentSide = (sideIndex == 0) ? TabboxSide::Left : TabboxSide::Right;
                 for (auto& tabbox : tab->tabboxes) {
                     if (tabbox->side == currentSide) {
-
-
                         ImGui::BeginChild(tabbox->name.c_str(), ImVec2(0, 200), true);
                         ImGui::Text("%s", tabbox->name.c_str());
                         ImGui::Separator();
@@ -161,15 +165,13 @@ namespace ez {
                             ImGui::PopID();
                         }
 
-                        if (!tabbox->tabs.empty()) {
+                        if (!tabbox->tabs.empty())
                             ImGui::Separator();
 
-                            if (currentIndex >= 0 && currentIndex < tabbox->tabs.size()) {
-                                auto& activeTab = tabbox->tabs[currentIndex];
-                                ImGui::BeginChild(("##ContentFrame_" + tabbox->name).c_str(), ImVec2(-1, 0), ImGuiChildFlags_None);
-                                activeTab->Render();
-                                ImGui::EndChild();
-                            }
+                        if (!tabbox->tabs.empty() && currentIndex >= 0 && currentIndex < tabbox->tabs.size()) {
+                            ImGui::BeginChild(("##ContentFrame_" + tabbox->name).c_str(), ImVec2(-1, 0), ImGuiChildFlags_None);
+                            tabbox->tabs[currentIndex]->Render();
+                            ImGui::EndChild();
                         }
                         else {
                             ImGui::BeginChild(("##ContentFrame_" + tabbox->name).c_str(), ImVec2(-1, 0), ImGuiChildFlags_None);

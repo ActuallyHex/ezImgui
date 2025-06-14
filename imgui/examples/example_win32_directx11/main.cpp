@@ -139,103 +139,48 @@ int main(int, char**)
 
         //static bool myToggle = false;
         //tabboxTab1->AddToggle("hi", &myToggle);
-
+        static auto side = ez::TabboxSide::Left;
         static bool myToggle = false;
         static bool myToggle2 = false;
         static float mySlider = 0.0f;
         static ImVec4 myColor = ImVec4(1, 0, 0, 1);
 
-        auto myWindow = ez::CreateEzWindow("Hello", ImVec2(500, 300), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar, true);
-        auto tab = myWindow->AddTab("Main");
+        auto myWindow = ez::CreateEzWindow("Test Window", ImVec2(500, 300), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar, true);
+        auto tab1 = myWindow->AddTab("First");
         auto tab2 = myWindow->AddTab("Second");
+        auto tab3 = myWindow->AddTab("Third");
+        auto tab4 = myWindow->AddTab("Fourth");
+        auto tab5 = myWindow->AddTab("Fifth");
 
-        auto box = tab->AddTabbox("Group");
-        auto boxTab = box->AddTab("Settings");
-        auto t1 = box->AddTab("Controls");
+        auto tbbx1 = tab1->AddTabbox("Tabbox 1", ez::TabboxSide::Left);
+        tbbx1->AddLabel("Avacados");
+        tbbx1->AddLabel("Bananas");
+        tbbx1->AddToggle("Checkmark", &myToggle);
+        tbbx1->AddColorPicker("Color 1", &myColor);
+        tbbx1->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
 
-        auto rightBox = tab->AddTabbox("Testing", ez::TabboxSide::Right);
-        auto rightTab = rightBox->AddTab("1");
-        auto rightTab2 = rightBox->AddTab("2");
-        auto rightTab3 = rightBox->AddTab("3");
-        auto rightTab4 = rightBox->AddTab("4");
-        auto rightTab5 = rightBox->AddTab("5");
-        auto rightTab6 = rightBox->AddTab("6");
-
-        boxTab->AddLabel("Test Label");
-        //boxTab->AddToggleWithColor("Testing rrrrr", &myToggle, &myColor);
-        boxTab->AddToggle("Enable Feature", &myToggle);
-        boxTab->AddToggle("Second bool", &myToggle2);
+        auto tbbx2 = tab1->AddTabbox("Tabbox 2", ez::TabboxSide::Right);
+        tbbx2->AddColorPicker("Color 1", &myColor);
+        tbbx2->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
+        tbbx2->AddToggle("Checkmark", &myToggle2);
+        tbbx2->AddLabel("Tomatoes");
+        tbbx2->AddLabel("Cucumbers");
         
-        t1->AddToggle("hi", &myToggle);
-        t1->AddToggle("hello", &myToggle2);
-        boxTab->AddSlider("slider", &mySlider, 0, 100);
 
-        auto box2 = tab2->AddTabbox("Hi");
-        box2->AddLabel("stinky");
-        box2->AddToggle("bruh momen", &myToggle);
-        box2->AddColorPicker("Colors!", &myColor);
-        box2->AddLabel("Testing labelll");
+        for (int i = 0; i < 5; i++)
+        {
+            std::string name = "Tabbox Left: " + std::to_string(i + 1);
+            tab2->AddTabbox(name.c_str(), ez::TabboxSide::Left);
+        }
 
-        auto box3 = tab2->AddTabbox("roblox", ez::TabboxSide::Right);
-
-        auto box4 = tab2->AddTabbox("meow");
-
-        auto box5 = tab2->AddTabbox("we da best", ez::TabboxSide::Right);
+        for (int i = 0; i < 5; i++)
+        {
+            std::string name = "Tabbox Right: " + std::to_string(i + 1);
+            tab2->AddTabbox(name.c_str(), ez::TabboxSide::Right);
+        }
+        
 
         myWindow->Render();
-
-        //ImGui::SetNextWindowSize(ImVec2(500, 300));
-        //ImGui::Begin("Hello, world!", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse);
-        //{
-        //    if (ImGui::BeginTabBar("MyTabBar"))
-        //    {
-        //        if (ImGui::BeginTabItem("Avocado"))
-        //        {
-        //            currentTab = 0;
-        //            ImGui::EndTabItem();
-        //        }
-        //        if (ImGui::BeginTabItem("Broccoli"))
-        //        {
-        //            currentTab = 1;
-        //            ImGui::EndTabItem();
-        //        }
-        //        if (ImGui::BeginTabItem("Cucumber"))
-        //        {
-        //            currentTab = 2;
-        //            ImGui::EndTabItem();
-        //        }
-        //        ImGui::EndTabBar();
-        //    }
-
-        //    ImGui::BeginChild("##MainFrame", ImVec2(485, 240), ImGuiChildFlags_Border);
-        //    {
-        //        if (currentTab == 0)
-        //        {
-        //            ImGui::Text("Tab 1");
-
-        //            ImGui::BeginChild("##Child", ImVec2(150, 50), ImGuiChildFlags_Border);
-        //            {
-        //                ImGui::Text("Container Group 1");
-        //                ImGui::Separator();
-
-        //            }
-        //            ImGui::EndChild();
-        //        }
-        //        else if (currentTab == 1)
-        //        {
-        //            ImGui::Text("Tab 2");
-        //        }
-        //        else if (currentTab == 2)
-        //        {
-        //            ImGui::Text("Tab 3");
-        //        }
-        //    }
-        //    ImGui::EndChildFrame();
-
-        //}
-        //ImGui::End();
-
-
 
         // Rendering
         ImGui::Render();

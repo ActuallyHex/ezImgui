@@ -1,10 +1,10 @@
-// ez.h
 #pragma once
 #include <imgui.h>
 #include <memory>
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <variant>
 
 namespace ez {
 
@@ -19,44 +19,60 @@ namespace ez {
         Right
     };
 
-    struct TabboxTab;
-    struct Tabbox;
-    struct Tab;
-    struct Window;
+    enum class ElementType {
+        Toggle,
+        Slider,
+        ColorPicker,
+        Label
+    };
+
+    struct UIElement {
+        ElementType type;
+        std::string label;
+        union {
+            bool* boolValue;
+            struct { float* value; float min; float max; };
+            ImVec4* colorValue;
+        };
+
+        UIElement(const std::string& lbl, bool* val)
+            : type(ElementType::Toggle), label(lbl), boolValue(val) {
+        }
+        UIElement(const std::string& lbl, float* val, float mi, float ma)
+            : type(ElementType::Slider), label(lbl) {
+            value = val; min = mi; max = ma;
+        }
+        UIElement(const std::string& lbl, ImVec4* col)
+            : type(ElementType::ColorPicker), label(lbl), colorValue(col) {
+        }
+        UIElement(const std::string& lbl)
+            : type(ElementType::Label), label(lbl) {
+        }
+    };
 
     struct TabboxTab {
         std::string name;
-        std::vector<std::pair<std::string, bool*>> checkboxes;
-        std::vector<std::pair<std::string, bool*>> toggles;
-        std::vector<std::tuple<std::string, float*, float, float>> sliders;
-        std::vector<std::pair<std::string, ImVec4*>> colorPickers;
-        std::vector<std::string> labels;
+        std::vector<UIElement> elements;
 
         void AddToggle(const char* label, bool* value);
-        void AddLabel(const char* label);
         void AddSlider(const char* label, float* value, float min, float max);
         void AddColorPicker(const char* label, ImVec4* color);
+        void AddLabel(const char* label);
         void Render();
     };
 
     struct Tabbox {
         std::string name;
         std::vector<std::shared_ptr<TabboxTab>> tabs;
+        std::vector<UIElement> elements;  // extras if tabs are empty
         int currentTabIndex = 0;
         TabboxSide side = TabboxSide::Left;
 
-        // Optional tabbox-level elements
-        std::vector<std::pair<std::string, bool*>> checkboxes;
-        std::vector<std::pair<std::string, bool*>> toggles;
-        std::vector<std::tuple<std::string, float*, float, float>> sliders;
-        std::vector<std::pair<std::string, ImVec4*>> colorPickers;
-        std::vector<std::string> labels;
-
         std::shared_ptr<TabboxTab> AddTab(const char* name);
         void AddToggle(const char* label, bool* value);
-        void AddLabel(const char* label);
         void AddSlider(const char* label, float* value, float min, float max);
         void AddColorPicker(const char* label, ImVec4* color);
+        void AddLabel(const char* label);
         void RenderExtras();
     };
 
@@ -78,11 +94,9 @@ namespace ez {
         ImGuiWindowFlags flags;
 
         Window(const char* title_, ImVec2 size_, ImGuiWindowFlags flags_, bool autoshow_);
-
         std::shared_ptr<Tab> AddTab(const char* name);
         void Render();
     };
 
     std::shared_ptr<Window> CreateEzWindow(const char* title, ImVec2 size, ImGuiWindowFlags flags = ImGuiWindowFlags_None, bool autoshow = true);
-
 }
