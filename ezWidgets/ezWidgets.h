@@ -12,5 +12,6 @@ using namespace ImGui;
 namespace ezWidgets
 {
     bool ToggleSwitch(const char* label, bool* v);
-    bool CheckboxAnim(const char* label, bool* v, const char* hint = "", ImFont* font = ImGui::GetDefaultFont());
+    bool CheckboxAnim1(const char* label, bool* v, const char* hint = "", ImFont* font = ImGui::GetDefaultFont());
+    bool CheckboxAnim2(const char* label, bool* v);
 }

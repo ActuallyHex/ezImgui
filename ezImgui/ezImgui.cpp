@@ -1,7 +1,15 @@
 #include "ezImgui.h"
+
+#define USE_EZ_WIDGETS
+
+#ifdef USE_EZ_WIDGETS
 #include "../ezWidgets/ezWidgets.h"
+#endif
 
 namespace ez {
+
+    WidgetMode g_WidgetMode = WidgetMode::FancyWidgets;
+    CheckboxMode g_CheckboxMode = CheckboxMode::Anim1;
 
     Window::Window(const char* title_, ImVec2 size_, ImGuiWindowFlags flags_, bool autoshow_)
         : title(title_), size(size_), flags(flags_), autoshow(autoshow_) {
@@ -18,6 +26,20 @@ namespace ez {
             fonts[name] = font;
     }
 
+    void LoadFontFromMemory(const std::string& name, void* data, int size_bytes, float size_pixels)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        ImFontConfig font_cfg;
+        font_cfg.FontDataOwnedByAtlas = false; // don't let ImGui delete your memory
+
+        ImFont* font = io.Fonts->AddFontFromMemoryTTF(data, size_bytes, size_pixels, &font_cfg);
+        if (font) {
+            fonts[name] = font;
+        }
+    }
+
+    // SetFont
+    // Add way to pushfont tabboxes and its contents 
     void SetFont(const std::string& name) {
         if (fonts.contains(name)) {
             currentFontName = name;
@@ -48,7 +70,7 @@ namespace ez {
         return tab;
     }
 
-    void TabboxTab::AddToggle(const char* label, bool* value) {
+    void TabboxTab::AddCheckbox(const char* label, bool* value) {
         elements.emplace_back(label, value);
     }
 
@@ -64,7 +86,7 @@ namespace ez {
         elements.emplace_back(label);
     }
 
-    void Tabbox::AddToggle(const char* label, bool* value) {
+    void Tabbox::AddCheckbox(const char* label, bool* value) {
         elements.emplace_back(label, value);
     }
 
@@ -84,8 +106,22 @@ namespace ez {
         for (const auto& e : elements) {
             switch (e.type) {
             case ElementType::Toggle:
-                ImGui::Checkbox(e.label.c_str(), e.boolValue);
+            {
+                #ifdef USE_EZ_WIDGETS
+                    if (ez::g_CheckboxMode == ez::CheckboxMode::ToggleSwitch)
+                        ezWidgets::ToggleSwitch(e.label.c_str(), e.boolValue);
+                    else if (ez::g_CheckboxMode == ez::CheckboxMode::Anim1)
+                        ezWidgets::CheckboxAnim1(e.label.c_str(), e.boolValue);
+                    else if (ez::g_CheckboxMode == ez::CheckboxMode::Anim2)
+                        ezWidgets::CheckboxAnim2(e.label.c_str(), e.boolValue);
+                    else
+                        ImGui::Checkbox(e.label.c_str(), e.boolValue); // fall back to default
+                #else // USE_EZ_WIDGETS
+                    ImGui::Checkbox(e.label.c_str(), e.boolValue);
+                #endif
+
                 break;
+            }
             case ElementType::Slider:
                 ImGui::SliderFloat(e.label.c_str(), e.value, e.min, e.max);
                 break;

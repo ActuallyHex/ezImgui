@@ -1,6 +1,6 @@
 ### EzImgui
 
-EzImgui is an extension that utilizes and leverages the ImGui graphical interface library and makes the experience of developing your own menu much, much easier.
+EzImgui is an extension that utilizes and leverages the ImGui graphical interface library and makes the experience of developing your own user interface much easier.
 
 ## Code Snippets
 
@@ -25,5 +25,13 @@ auto tab2 = myWindow->AddTab("Second");
 auto tbbx1 = tab1->AddTabbox("Tabbox 1", ez::TabboxSide::Left);
 
 auto tbbx2 = tab1->AddTabbox("Tabbox 2", ez::TabboxSide::Right);
+
+```
+
+Adding Fonts
+```cpp
+ez::LoadFont("default", "C:/Windows/Fonts/segoeui.ttf", 17.0f);
+ez::LoadFont("mono", "C:/Windows/Fonts/consola.ttf", 13.0f);
+ez::LoadFontFromMemory("pixel", pixelFONT, sizeof(pixelFONT), 15.0f);
 
 ```

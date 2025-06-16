@@ -36,6 +36,9 @@
     <ClInclude Include="..\..\..\ezImgui\ezImgui.h">
       <Filter>ezImgui</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\Downloads\font_array.h">
+      <Filter>sources</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\imgui.cpp">

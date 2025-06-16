@@ -150,6 +150,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\..\Downloads\font_array.h" />
     <ClInclude Include="..\..\..\ezImgui\ezImgui.h" />
     <ClInclude Include="..\..\..\ezWidgets\ezWidgets.h" />
     <ClInclude Include="..\..\imconfig.h" />

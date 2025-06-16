@@ -12,6 +12,7 @@
 #include <d3d11.h>
 #include <tchar.h>
 #include "../ezImgui/ezImgui.h"
+#include "../../../../../Downloads/font_array.h"
 
 // Data
 static ID3D11Device*            g_pd3dDevice = nullptr;
@@ -81,8 +82,9 @@ int main(int, char**)
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != nullptr);
-    //ez::LoadFont("default", "C:/Windows/Fonts/segoeui.ttf", 16.0f);
+    //ez::LoadFont("default", "C:/Windows/Fonts/segoeui.ttf", 17.0f);
     ez::LoadFont("mono", "C:/Windows/Fonts/consola.ttf", 13.0f);
+    //ez::LoadFontFromMemory("pixel", pixelFONT, sizeof(pixelFONT), 15.0f);
 
     // Our state
     bool show_demo_window = true;
@@ -132,13 +134,6 @@ int main(int, char**)
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
-        //auto myWindow = ez::CreateEzWindow("Hello", true, true);
-        //auto tab1 = myWindow->AddTab("Main");
-        //auto tabbox1 = tab1->AddTabbox("Group 1");
-        //auto tabboxTab1 = tabbox1->AddTab("Settings");
-
-        //static bool myToggle = false;
-        //tabboxTab1->AddToggle("hi", &myToggle);
         static auto side = ez::TabboxSide::Left;
         static bool myToggle = false;
         static bool myToggle2 = false;
@@ -150,35 +145,44 @@ int main(int, char**)
         auto tab2 = myWindow->AddTab("Second");
         auto tab3 = myWindow->AddTab("Third");
         auto tab4 = myWindow->AddTab("Fourth");
-        auto tab5 = myWindow->AddTab("Fifth");
+        auto tab5 = myWindow->AddTab("Settings");
 
         auto tbbx1 = tab1->AddTabbox("Tabbox 1", ez::TabboxSide::Left);
         tbbx1->AddLabel("Avacados");
         tbbx1->AddLabel("Bananas");
-        tbbx1->AddToggle("Checkmark", &myToggle);
+        tbbx1->AddCheckbox("Checkmark", &myToggle);
         tbbx1->AddColorPicker("Color 1", &myColor);
         tbbx1->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
 
         auto tbbx2 = tab1->AddTabbox("Tabbox 2", ez::TabboxSide::Right);
         tbbx2->AddColorPicker("Color 1", &myColor);
         tbbx2->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
-        tbbx2->AddToggle("Checkmark", &myToggle2);
+        tbbx2->AddCheckbox("Checkmark", &myToggle2);
         tbbx2->AddLabel("Tomatoes");
         tbbx2->AddLabel("Cucumbers");
         
 
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 15; i++)
         {
-            std::string name = "Tabbox Left: " + std::to_string(i + 1);
-            tab2->AddTabbox(name.c_str(), ez::TabboxSide::Left);
-        }
+            std::string nameL = "Tabbox Left: " + std::to_string(i + 1);
+            tab2->AddTabbox(nameL.c_str(), ez::TabboxSide::Left);
 
-        for (int i = 0; i < 5; i++)
-        {
-            std::string name = "Tabbox Right: " + std::to_string(i + 1);
-            tab2->AddTabbox(name.c_str(), ez::TabboxSide::Right);
+            std::string nameR = "Tabbox Right: " + std::to_string(i + 1);
+            tab2->AddTabbox(nameR.c_str(), ez::TabboxSide::Right);
         }
         
+        auto tb3bx1 = tab3->AddTabbox("Tabbox 1", ez::TabboxSide::Left);
+        auto tb3Tab1 = tb3bx1->AddTab("1");
+        tb3Tab1->AddLabel("Test label Tab 1");
+        tb3Tab1->AddCheckbox("1 Test", &myToggle);
+
+        auto tb3Tab2 = tb3bx1->AddTab("2");
+        tb3Tab2->AddLabel("Test label Tab 2");
+        tb3Tab2->AddCheckbox("2 Test", &myToggle2);
+
+
+
+
 
         myWindow->Render();
 

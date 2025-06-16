@@ -91,8 +91,7 @@ bool ezWidgets::ToggleSwitch(const char* label, bool* v)
     return pressed;
 }
 
-
-bool ezWidgets::CheckboxAnim(const char* label, bool* v, const char* hint, ImFont* font)
+bool ezWidgets::CheckboxAnim1(const char* label, bool* v, const char* hint, ImFont* font)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -196,5 +195,94 @@ bool ezWidgets::CheckboxAnim(const char* label, bool* v, const char* hint, ImFon
     if (hint_size.x > 0.f)
         window->DrawList->AddText(GetIO().Fonts->Fonts[0], GetIO().Fonts->Fonts[0]->FontSize - 1.f, ImVec2(label_pos.x, label_pos.y + label_size.y + 1), GetColorU32(ImGuiCol_Text, 0.7f), hint, FindRenderedTextEnd(hint));
 
+    return pressed;
+}
+
+struct checkbox_state
+{
+    ImVec4 gradient_color0, gradient_color1;
+
+    ImVec4 text_color, checkmark_color, background_color;
+
+    float rg;
+};
+
+bool ezWidgets::CheckboxAnim2(const char* label, bool* v)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const ImGuiID id = window->GetID(label);
+    const ImVec2 label_size = CalcTextSize(label, NULL, true);
+
+    const float square_sz = GetFrameHeight() + 1;
+    const ImVec2 pos = window->DC.CursorPos;
+
+    ImVec2 total_size = ImVec2(
+        square_sz + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f),
+        ImMax(square_sz, label_size.y + style.FramePadding.y * 2.0f)
+    );
+    ImRect total_bb(pos, ImVec2(pos.x + total_size.x, pos.y + total_size.y));
+
+    ItemSize(total_bb, style.FramePadding.y);
+    if (!ItemAdd(total_bb, id))
+    {
+        IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
+        return false;
+    }
+
+    bool hovered, held;
+    bool pressed = ButtonBehavior(total_bb, id, &hovered, &held);
+    if (pressed)
+    {
+        *v = !(*v);
+        MarkItemEdited(id);
+    }
+
+    static std::map<ImGuiID, checkbox_state> anim;
+    auto& a = anim[id];
+
+    // Color interpolation setup
+    ImVec4 on_bg = ImGui::GetStyleColorVec4(ImGuiCol_FrameBgActive);
+    ImVec4 off_bg = ImVec4(0, 0, 0, 0);
+    ImVec4 checkmark_color = ImGui::GetStyleColorVec4(ImGuiCol_CheckMark);
+    ImVec4 text_on = ImVec4(1, 1, 1, 1);
+    ImVec4 text_off_hover = ImVec4(76 / 255.0f, 75 / 255.0f, 80 / 255.0f, 1);
+    ImVec4 text_off = ImVec4(66 / 255.0f, 65 / 255.0f, 70 / 255.0f, 1);
+
+    ImVec4 target_color = *v ? on_bg : (hovered ? off_bg : off_bg);
+    a.gradient_color0 = ImLerp(a.gradient_color0, target_color, g.IO.DeltaTime * 6.f);
+    a.gradient_color1 = ImLerp(a.gradient_color1, target_color, g.IO.DeltaTime * 6.f);
+    a.checkmark_color = ImLerp(a.checkmark_color, *v ? checkmark_color : off_bg, g.IO.DeltaTime * 9.f);
+    a.text_color = ImLerp(a.text_color, *v ? text_on : (hovered ? text_off_hover : text_off), g.IO.DeltaTime * 6.f);
+    a.rg = ImLerp(a.rg, *v ? 0.f : 10.f, g.IO.DeltaTime * 5.f);
+
+    ImRect check_bb(pos, ImVec2(pos.x + square_sz, pos.y + square_sz));
+    RenderNavHighlight(total_bb, id);
+    RenderFrame(check_bb.Min, check_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+
+    const int vtx_start = window->DrawList->VtxBuffer.Size;
+
+    ImVec2 min_rect = ImVec2(check_bb.Min.x + a.rg, check_bb.Min.y + a.rg);
+    ImVec2 max_rect = ImVec2(check_bb.Max.x - a.rg, check_bb.Max.y - a.rg);
+
+    window->DrawList->AddRectFilled(min_rect, max_rect, GetColorU32(a.gradient_color0), style.FrameRounding);
+    ImGui::ShadeVertsLinearColorGradientKeepAlpha(window->DrawList, vtx_start, window->DrawList->VtxBuffer.Size,
+        check_bb.Min, check_bb.Max, GetColorU32(a.gradient_color1), GetColorU32(a.gradient_color0));
+
+    const float pad = ImMax(1.0f, IM_FLOOR(square_sz / 6.0f));
+    if (*v)
+    {
+        ImVec2 check_pos = ImVec2(check_bb.Min.x + pad + 3.0f, check_bb.Min.y + pad + 3.0f + a.rg);
+        RenderCheckMark(window->DrawList, check_pos, GetColorU32(a.checkmark_color), square_sz - pad * 4.0f);
+    }
+
+    ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
+    window->DrawList->AddText(label_pos, GetColorU32(a.text_color), label);
+
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
     return pressed;
 }

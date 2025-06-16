@@ -8,10 +8,23 @@
 
 namespace ez {
 
+    enum class WidgetMode {
+        ImGuiDefault,
+        FancyWidgets
+    };
+
+    enum class CheckboxMode {
+        ImGuiDefault,
+        ToggleSwitch,
+        Anim1,
+        Anim2
+    };
+
     inline std::unordered_map<std::string, ImFont*> fonts;
     inline std::string currentFontName = "default";
 
     void LoadFont(const std::string& name, const char* path, float size);
+    void LoadFontFromMemory(const std::string& name, void* data, int size_bytes, float size_pixels);
     void SetFont(const std::string& name);
 
     enum class TabboxSide {
@@ -54,7 +67,7 @@ namespace ez {
         std::string name;
         std::vector<UIElement> elements;
 
-        void AddToggle(const char* label, bool* value);
+        void AddCheckbox(const char* label, bool* value);
         void AddSlider(const char* label, float* value, float min, float max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
@@ -69,7 +82,7 @@ namespace ez {
         TabboxSide side = TabboxSide::Left;
 
         std::shared_ptr<TabboxTab> AddTab(const char* name);
-        void AddToggle(const char* label, bool* value);
+        void AddCheckbox(const char* label, bool* value);
         void AddSlider(const char* label, float* value, float min, float max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
@@ -99,4 +112,7 @@ namespace ez {
     };
 
     std::shared_ptr<Window> CreateEzWindow(const char* title, ImVec2 size, ImGuiWindowFlags flags = ImGuiWindowFlags_None, bool autoshow = true);
+
+    extern WidgetMode g_WidgetMode;
 }
+
