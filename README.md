@@ -28,6 +28,31 @@ auto tbbx2 = tab1->AddTabbox("Tabbox 2", ez::TabboxSide::Right);
 
 ```
 
+Adding UI Elements
+```cpp
+// When adding elements such as checkboxes
+// they can be added to tabboxes or tabbox tabs
+
+// Tabboxes
+auto tab1 = myWindow->AddTab("First");
+auto tbbx1 = tab1->AddTabbox("Tabbox 1", ez::TabboxSide::Left);
+tbbx1->AddLabel("Avacados");
+tbbx1->AddLabel("Bananas");
+tbbx1->AddCheckbox("Checkmark", &myToggle);
+
+// Tabbox Tabs
+auto tbbx2 = tab1->AddTabbox("Tabbox 2", ez::TabboxSide::Right);
+auto tb2Tab1 = tbbx2->AddTab("1");
+tb2Tab1->AddLabel("Tomatoes");
+
+auto tb2Tab2 = tbbx2->AddTab("2");
+tb2Tab2->AddLabel("Cucumbers");
+
+```
+
+
+
+
 Adding Fonts
 ```cpp
 ez::LoadFont("default", "C:/Windows/Fonts/segoeui.ttf", 17.0f);
