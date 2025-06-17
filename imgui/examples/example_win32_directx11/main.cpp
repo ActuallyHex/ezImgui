@@ -12,7 +12,7 @@
 #include <d3d11.h>
 #include <tchar.h>
 #include "../ezImgui/ezImgui.h"
-#include "../../../../../Downloads/font_array.h"
+//#include "../../../../../Downloads/font_array.h"
 
 // Data
 static ID3D11Device*            g_pd3dDevice = nullptr;
@@ -56,6 +56,7 @@ int main(int, char**)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGuiStyle& style = ImGui::GetStyle();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
@@ -139,13 +140,14 @@ int main(int, char**)
         static bool myToggle2 = false;
         static float mySlider = 0.0f;
         static ImVec4 myColor = ImVec4(1, 0, 0, 1);
+        static ImVec4 accentColor = ImVec4(41.f / 255.f, 74.f / 255.f, 122.f / 255.f, 1);
 
         auto myWindow = ez::CreateEzWindow("Test Window", ImVec2(500, 300), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar, true);
         auto tab1 = myWindow->AddTab("First");
         auto tab2 = myWindow->AddTab("Second");
         auto tab3 = myWindow->AddTab("Third");
         auto tab4 = myWindow->AddTab("Fourth");
-        auto tab5 = myWindow->AddTab("Settings");
+        auto settingsTab = myWindow->AddTab("Settings");
 
         auto tbbx1 = tab1->AddTabbox("Tabbox 1", ez::TabboxSide::Left);
         tbbx1->AddLabel("Avacados");
@@ -181,8 +183,12 @@ int main(int, char**)
         tb3Tab2->AddCheckbox("2 Test", &myToggle2);
 
 
+        auto settingsColorTab = settingsTab->AddTabbox("Menu Colors"); // 
+        settingsColorTab->AddColorPicker("Accent Color", &accentColor);
+        style.Colors[ImGuiCol_CheckMark] = accentColor;
+        style.Colors[ImGuiCol_Separator] = accentColor;
 
-
+        settingsColorTab->AddColorPicker("Tabbox Background Color", &ez::backgroundColor);
 
         myWindow->Render();
 

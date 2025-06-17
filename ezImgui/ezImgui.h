@@ -22,6 +22,7 @@ namespace ez {
 
     inline std::unordered_map<std::string, ImFont*> fonts;
     inline std::string currentFontName = "default";
+    inline ImVec4 backgroundColor = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 
     void LoadFont(const std::string& name, const char* path, float size);
     void LoadFontFromMemory(const std::string& name, void* data, int size_bytes, float size_pixels);

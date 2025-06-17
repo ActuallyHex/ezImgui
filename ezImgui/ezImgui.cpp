@@ -155,6 +155,7 @@ namespace ez {
     }
 
     void Window::Render() {
+
         ImGui::SetNextWindowSize(size, ImGuiCond_FirstUseEver);
         ImGui::Begin(title.c_str(), &isOpen, flags);
 
@@ -182,6 +183,9 @@ namespace ez {
                 TabboxSide currentSide = (sideIndex == 0) ? TabboxSide::Left : TabboxSide::Right;
                 for (auto& tabbox : tab->tabboxes) {
                     if (tabbox->side == currentSide) {
+                        
+                        // 41.f / 255.f, 74.f / 255.f, 122.f / 255.f, 1
+                        ImGui::PushStyleColor(ImGuiCol_ChildBg, ez::backgroundColor);
                         ImGui::BeginChild(tabbox->name.c_str(), ImVec2(0, 200), true);
                         ImGui::Text("%s", tabbox->name.c_str());
                         ImGui::Separator();
@@ -216,6 +220,7 @@ namespace ez {
                         }
 
                         ImGui::EndChild();
+                        ImGui::PopStyleColor();
                     }
                 }
                 ImGui::NextColumn();
