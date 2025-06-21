@@ -22,11 +22,18 @@ namespace ez {
 
     inline std::unordered_map<std::string, ImFont*> fonts;
     inline std::string currentFontName = "default";
-    inline ImVec4 backgroundColor = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    inline ImVec4 tbxBackgroundColor = ImVec4(0.102f, 0.103f, 0.103f, 1.00f);
+    inline ImVec4 winBackgroundColor = ImVec4(0.069f, 0.069f, 0.069f, 1.00f);
+    inline ImVec4 tbxBorderColor = ImVec4(0.275f, 0.275f, 0.275f, 1.00f);
+
+    inline WidgetMode g_WidgetMode = WidgetMode::FancyWidgets;
 
     void LoadFont(const std::string& name, const char* path, float size);
     void LoadFontFromMemory(const std::string& name, void* data, int size_bytes, float size_pixels);
     void SetFont(const std::string& name);
+    void RenderFullWidthSeparator(float thickness = 1.0f, ImU32 color = 0xFF444444);
+    void SetCheckboxStyle(CheckboxMode mode);
+    CheckboxMode GetCheckboxStyle();
 
     enum class TabboxSide {
         Left,

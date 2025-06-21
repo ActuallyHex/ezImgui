@@ -286,3 +286,4 @@ bool ezWidgets::CheckboxAnim2(const char* label, bool* v)
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
     return pressed;
 }
+

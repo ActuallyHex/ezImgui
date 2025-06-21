@@ -8,8 +8,7 @@
 
 namespace ez {
 
-    WidgetMode g_WidgetMode = WidgetMode::FancyWidgets;
-    CheckboxMode g_CheckboxMode = CheckboxMode::Anim1;
+    static CheckboxMode g_CheckboxMode = CheckboxMode::ImGuiDefault;
 
     Window::Window(const char* title_, ImVec2 size_, ImGuiWindowFlags flags_, bool autoshow_)
         : title(title_), size(size_), flags(flags_), autoshow(autoshow_) {
@@ -45,6 +44,36 @@ namespace ez {
             currentFontName = name;
             ImGui::PushFont(fonts[name]);
         }
+    }
+
+    void SetCheckboxStyle(CheckboxMode mode)
+    {
+        g_CheckboxMode = mode;
+    }
+
+    CheckboxMode GetCheckboxStyle()
+    {
+        return g_CheckboxMode;
+    }
+
+
+    void ez::RenderFullWidthSeparator(float thickness, ImU32 color)
+    {
+        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        if (window->SkipItems)
+            return;
+
+        ImGuiContext& g = *GImGui;
+        const float separatorY = ImGui::GetCursorScreenPos().y;
+
+        // Fetch full usable window area (not clipped by padding)
+        const float startX = window->Pos.x;
+        const float endX = window->Pos.x + window->Size.x;
+
+        window->DrawList->AddLine(ImVec2(startX, separatorY), ImVec2(endX, separatorY), color, thickness);
+
+        // Optional
+        ImGui::Dummy(ImVec2(0.0f, thickness + g.Style.ItemSpacing.y - 2.0f));
     }
 
     std::shared_ptr<Tab> Window::AddTab(const char* name) {
@@ -156,8 +185,13 @@ namespace ez {
 
     void Window::Render() {
 
+        ImGuiStyle& style = ImGui::GetStyle();
+
         ImGui::SetNextWindowSize(size, ImGuiCond_FirstUseEver);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ez::winBackgroundColor);
         ImGui::Begin(title.c_str(), &isOpen, flags);
+
+        //style.Colors[ImGuiCol_CheckMark] = accentColor;
 
         if (fonts.contains(currentFontName))
             ImGui::PushFont(fonts[currentFontName]);
@@ -185,10 +219,12 @@ namespace ez {
                     if (tabbox->side == currentSide) {
                         
                         // 41.f / 255.f, 74.f / 255.f, 122.f / 255.f, 1
-                        ImGui::PushStyleColor(ImGuiCol_ChildBg, ez::backgroundColor);
+                        ImGui::PushStyleColor(ImGuiCol_ChildBg, ez::tbxBackgroundColor);
+                        ImGui::PushStyleColor(ImGuiCol_Border, ez::tbxBorderColor);
                         ImGui::BeginChild(tabbox->name.c_str(), ImVec2(0, 200), true);
                         ImGui::Text("%s", tabbox->name.c_str());
-                        ImGui::Separator();
+
+                        RenderFullWidthSeparator();
 
                         int& currentIndex = tabboxStates[tabbox->name];
                         float buttonWidth = ImGui::GetContentRegionAvail().x / std::max(1, (int)tabbox->tabs.size());
@@ -206,8 +242,10 @@ namespace ez {
                         }
 
                         if (!tabbox->tabs.empty())
-                            ImGui::Separator();
+                            RenderFullWidthSeparator();
 
+                        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.f, 0.f, 0.f, 0.f));
+                        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.f, 0.f, 0.f, 0.f));
                         if (!tabbox->tabs.empty() && currentIndex >= 0 && currentIndex < tabbox->tabs.size()) {
                             ImGui::BeginChild(("##ContentFrame_" + tabbox->name).c_str(), ImVec2(-1, 0), ImGuiChildFlags_None);
                             tabbox->tabs[currentIndex]->Render();
@@ -218,9 +256,10 @@ namespace ez {
                             tabbox->RenderExtras();
                             ImGui::EndChild();
                         }
+                        ImGui::PopStyleColor(2);
 
                         ImGui::EndChild();
-                        ImGui::PopStyleColor();
+                        ImGui::PopStyleColor(2);
                     }
                 }
                 ImGui::NextColumn();
@@ -231,6 +270,7 @@ namespace ez {
         if (fonts.contains(currentFontName))
             ImGui::PopFont();
 
+        ImGui::PopStyleColor();
         ImGui::End();
     }
 

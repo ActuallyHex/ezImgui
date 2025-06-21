@@ -56,7 +56,6 @@ int main(int, char**)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGuiStyle& style = ImGui::GetStyle();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
@@ -140,7 +139,7 @@ int main(int, char**)
         static bool myToggle2 = false;
         static float mySlider = 0.0f;
         static ImVec4 myColor = ImVec4(1, 0, 0, 1);
-        static ImVec4 accentColor = ImVec4(41.f / 255.f, 74.f / 255.f, 122.f / 255.f, 1);
+        
 
         auto myWindow = ez::CreateEzWindow("Test Window", ImVec2(500, 300), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar, true);
         auto tab1 = myWindow->AddTab("First");
@@ -180,15 +179,18 @@ int main(int, char**)
 
         auto tb3Tab2 = tb3bx1->AddTab("2");
         tb3Tab2->AddLabel("Test label Tab 2");
-        tb3Tab2->AddCheckbox("2 Test", &myToggle2);
-
+        ez::SetCheckboxStyle(ez::CheckboxMode::Anim1);
+        tb3Tab2->AddCheckbox("Test 1", &myToggle2);
+        ez::SetCheckboxStyle(ez::CheckboxMode::ToggleSwitch);
+        tb3Tab2->AddCheckbox("Test 2", &myToggle);
 
         auto settingsColorTab = settingsTab->AddTabbox("Menu Colors"); // 
-        settingsColorTab->AddColorPicker("Accent Color", &accentColor);
-        style.Colors[ImGuiCol_CheckMark] = accentColor;
-        style.Colors[ImGuiCol_Separator] = accentColor;
+        settingsColorTab->AddColorPicker("Tabbox Border Color", &ez::tbxBorderColor);
+        //
+        //style.Colors[ImGuiCol_Separator] = accentColor;
 
-        settingsColorTab->AddColorPicker("Tabbox Background Color", &ez::backgroundColor);
+        settingsColorTab->AddColorPicker("Tabbox Background Color", &ez::tbxBackgroundColor);
+        settingsColorTab->AddColorPicker("Window Background Color", &ez::winBackgroundColor);
 
         myWindow->Render();
 
