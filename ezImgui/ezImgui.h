@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <variant>
 
+#define USE_EZ_WIDGETS
 
 namespace ez {
 
@@ -70,12 +71,18 @@ namespace ez {
             struct { int* currentItem; const char* const* items; int itemsCount; int heightInItems; } comboData;
         };
 
+        #ifdef USE_EZ_WIDGETS
+            UIElement(const std::string& lbl, bool* val, CheckboxStyle style = CheckboxStyle::ImGuiDefault)
+                : type(ElementType::Toggle), label(lbl), boolValue(val), styleValue(style) {
+            }
+
+        #else
         UIElement(const std::string& lbl, bool* val)
             : type(ElementType::Toggle), label(lbl), boolValue(val) {
         }
-        UIElement(const std::string& lbl, bool* val, CheckboxStyle style = CheckboxStyle::ImGuiDefault)
-            : type(ElementType::Toggle), label(lbl), boolValue(val), styleValue(style) {
-        }
+        #endif
+
+
         UIElement(const std::string& lbl, int* curval, std::initializer_list<const char*> itemsInitList, int height)
             : type(ElementType::ComboBox), label(lbl) {
             comboItemsStorage.assign(itemsInitList.begin(), itemsInitList.end());
@@ -123,8 +130,13 @@ namespace ez {
         void AddSlider(const char* label, float* value, float min, float max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
-        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
-        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);
+        
+        #ifdef USE_EZ_WIDGETS
+            void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);
+        #else
+            void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
+        #endif
+
         void Render();
     };
 
@@ -141,8 +153,13 @@ namespace ez {
         void AddSlider(const char* label, float* value, float min, float max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
-        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
-        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);
+
+        #ifdef USE_EZ_WIDGETS
+            void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);
+        #else        
+            void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
+        #endif
+
         void RenderExtras();
     };
 

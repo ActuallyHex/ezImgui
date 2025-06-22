@@ -154,13 +154,23 @@ int main(int, char**)
         tbbx1->AddLabel("Avacados");
         tbbx1->AddLabel("Bananas");
         tbbx1->AddCheckbox("Checkmark", &myToggle);
-        //tbbx1->AddColorPicker("Color 1", &myColor);
-        //tbbx1->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
+        tbbx1->AddColorPicker("Color 1", &myColor);
+        tbbx1->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
+
+        auto tbbx3 = tab1->AddTabbox("Tabbox Below", ez::TabboxSide::Left);
+        tbbx3->AddLabel("Look up!");
+        tbbx3->AddCheckbox("Hey!", &myToggle3);
+        tbbx3->AddCheckbox("Tabbox", &myToggle4);
+
+        auto tbbx4 = tab1->AddTabbox("Up Again", ez::TabboxSide::Left);
+        tbbx4->AddLabel("Length");
+        tbbx4->AddLabel("Testing");
+
 
         auto tbbx2 = tab1->AddTabbox("Tabbox 2", ez::TabboxSide::Right);
         tbbx2->AddColorPicker("Color 1", &myColor);
         tbbx2->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
-        tbbx2->AddCheckbox("Checkmark", &myToggle2, ez::CheckboxStyle::Anim2);
+        //tbbx2->AddCheckbox("Checkmark", &myToggle2, ez::CheckboxStyle::Anim2);
         tbbx2->AddLabel("Tomatoes");
         tbbx2->AddLabel("Cucumbers");
         
@@ -177,15 +187,16 @@ int main(int, char**)
         auto tb3Tab1 = tb3bx1->AddTab("1");
         tb3Tab1->AddLabel("Test label Tab 1");
         //tb3Tab1->AddCheckbox("1 Test", &myToggle);
-        tb3Tab1->AddCheckbox("1 Test", &myToggle, ez::CheckboxStyle::ImGuiDefault);
-        tb3Tab1->AddComboBox("My Combo Box", &myChoice, {"One", "Two", "Three"}, -1, ez::ComboBoxStyle::Style1);
+        tb3Tab1->AddCheckbox("1 Test", &myToggle);
+        //tb3Tab1->AddComboBox("My Combo Box", &myChoice, {"One", "Two", "Three"}, -1);
+        tb3Tab1->AddComboBox("My combo", &myChoice, {"one", "two", "three"}, -1);
 
         auto tb3Tab2 = tb3bx1->AddTab("2");
         tb3Tab2->AddLabel("Test label Tab 2");
         tb3Tab2->AddCheckbox("Test 1", &myToggle);
-        tb3Tab2->AddCheckbox("Test 2", &myToggle2, ez::CheckboxStyle::Anim1);
-        tb3Tab2->AddCheckbox("Test 3", &myToggle3, ez::CheckboxStyle::Anim2);
-        tb3Tab2->AddCheckbox("Test 4", &myToggle4, ez::CheckboxStyle::ToggleSwitch);
+        tb3Tab2->AddCheckbox("Test 2", &myToggle2);
+        tb3Tab2->AddCheckbox("Test 3", &myToggle3);
+        tb3Tab2->AddCheckbox("Test 4", &myToggle4);
 
         auto settingsColorTab = settingsTab->AddTabbox("Menu Colors"); // 
         settingsColorTab->AddColorPicker("Tabbox Border Color", &ez::tbxBorderColor);

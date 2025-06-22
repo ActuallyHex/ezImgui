@@ -1,8 +1,6 @@
 #include "ezImgui.h"
 #include <imgui_internal.h>
 
-#define USE_EZ_WIDGETS
-
 #ifdef USE_EZ_WIDGETS
 #include "../ezWidgets/ezWidgets.h"
 #endif
@@ -195,7 +193,9 @@ namespace ez {
             elements.emplace_back(label, current_item, items, height_in_items, style);
         }
 
-    #else
+    #endif
+
+    #ifndef USE_EZ_WIDGETS
         void TabboxTab::AddCheckbox(const char* label, bool* value) {
             elements.emplace_back(label, value);
         }
@@ -342,13 +342,18 @@ namespace ez {
                             case ElementType::ColorPicker:
                                 tabboxHeight += itemHeight * 1.0f; // color pickers are taller
                                 break;
+                            case ElementType::Toggle:
+                                tabboxHeight += (itemHeight * 1.19f) - (elementCount);
+                                break;
                             default:
                                 tabboxHeight += itemHeight;
                                 break;
                             }
                         }
 
-                        // 41.f / 255.f, 74.f / 255.f, 122.f / 255.f, 1
+                        if (elementCount == 0) // element list is empty. 
+                            tabboxHeight += itemHeight * 0.79f;
+
                         ImGui::PushStyleColor(ImGuiCol_ChildBg, ez::tbxBackgroundColor);
                         ImGui::PushStyleColor(ImGuiCol_Border, ez::tbxBorderColor);
                         ImGui::BeginChild(tabbox->name.c_str(), ImVec2(0, tabboxHeight), true);
