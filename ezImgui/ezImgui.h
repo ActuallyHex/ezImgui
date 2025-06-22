@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <variant>
 
+
 namespace ez {
 
     enum class WidgetMode {
@@ -13,11 +14,17 @@ namespace ez {
         FancyWidgets
     };
 
-    enum class CheckboxMode {
+    enum class CheckboxStyle {
         ImGuiDefault,
         ToggleSwitch,
         Anim1,
         Anim2
+    };
+
+    enum class ComboBoxStyle {
+        ImGuiDefault,
+        Style1,
+        Style2
     };
 
     inline std::unordered_map<std::string, ImFont*> fonts;
@@ -28,12 +35,14 @@ namespace ez {
 
     inline WidgetMode g_WidgetMode = WidgetMode::FancyWidgets;
 
+    inline float minTabboxHeight = 100.0f;
+    inline float maxTabboxHeight = 400.0f;
+    inline float elementHeight = 26.0f;
+
     void LoadFont(const std::string& name, const char* path, float size);
     void LoadFontFromMemory(const std::string& name, void* data, int size_bytes, float size_pixels);
     void SetFont(const std::string& name);
     void RenderFullWidthSeparator(float thickness = 1.0f, ImU32 color = 0xFF444444);
-    void SetCheckboxStyle(CheckboxMode mode);
-    CheckboxMode GetCheckboxStyle();
 
     enum class TabboxSide {
         Left,
@@ -44,20 +53,54 @@ namespace ez {
         Toggle,
         Slider,
         ColorPicker,
-        Label
+        Label,
+        ComboBox
     };
 
     struct UIElement {
         ElementType type;
+        CheckboxStyle styleValue;
+        ComboBoxStyle comboStyle;
         std::string label;
+        std::vector<std::string> comboItemsStorage;
         union {
             bool* boolValue;
             struct { float* value; float min; float max; };
             ImVec4* colorValue;
+            struct { int* currentItem; const char* const* items; int itemsCount; int heightInItems; } comboData;
         };
 
         UIElement(const std::string& lbl, bool* val)
             : type(ElementType::Toggle), label(lbl), boolValue(val) {
+        }
+        UIElement(const std::string& lbl, bool* val, CheckboxStyle style = CheckboxStyle::ImGuiDefault)
+            : type(ElementType::Toggle), label(lbl), boolValue(val), styleValue(style) {
+        }
+        UIElement(const std::string& lbl, int* curval, std::initializer_list<const char*> itemsInitList, int height)
+            : type(ElementType::ComboBox), label(lbl) {
+            comboItemsStorage.assign(itemsInitList.begin(), itemsInitList.end());
+            comboData.currentItem = curval;
+            comboData.itemsCount = static_cast<int>(comboItemsStorage.size());
+            comboData.heightInItems = height;
+
+            static std::vector<const char*> tempPointers;
+            tempPointers.clear();
+            for (const auto& s : comboItemsStorage)
+                tempPointers.push_back(s.c_str());
+            comboData.items = tempPointers.data();
+        }
+        UIElement(const std::string& lbl, int* curval, std::initializer_list<const char*> itemsInitList, int height, ComboBoxStyle style)
+            : type(ElementType::ComboBox), label(lbl), comboStyle(style) {
+            comboItemsStorage.assign(itemsInitList.begin(), itemsInitList.end());
+            comboData.currentItem = curval;
+            comboData.itemsCount = static_cast<int>(comboItemsStorage.size());
+            comboData.heightInItems = height;
+
+            static std::vector<const char*> tempPointers;
+            tempPointers.clear();
+            for (const auto& s : comboItemsStorage)
+                tempPointers.push_back(s.c_str());
+            comboData.items = tempPointers.data();
         }
         UIElement(const std::string& lbl, float* val, float mi, float ma)
             : type(ElementType::Slider), label(lbl) {
@@ -76,9 +119,12 @@ namespace ez {
         std::vector<UIElement> elements;
 
         void AddCheckbox(const char* label, bool* value);
+        void AddCheckbox(const char* label, bool* value, CheckboxStyle style);
         void AddSlider(const char* label, float* value, float min, float max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
+        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
+        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);
         void Render();
     };
 
@@ -91,9 +137,12 @@ namespace ez {
 
         std::shared_ptr<TabboxTab> AddTab(const char* name);
         void AddCheckbox(const char* label, bool* value);
+        void AddCheckbox(const char* label, bool* value, CheckboxStyle style);
         void AddSlider(const char* label, float* value, float min, float max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
+        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
+        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);
         void RenderExtras();
     };
 

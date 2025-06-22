@@ -1,4 +1,5 @@
 #include "ezImgui.h"
+#include <imgui_internal.h>
 
 #define USE_EZ_WIDGETS
 
@@ -8,7 +9,7 @@
 
 namespace ez {
 
-    static CheckboxMode g_CheckboxMode = CheckboxMode::ImGuiDefault;
+    static CheckboxStyle g_CheckboxMode = CheckboxStyle::ImGuiDefault;
 
     Window::Window(const char* title_, ImVec2 size_, ImGuiWindowFlags flags_, bool autoshow_)
         : title(title_), size(size_), flags(flags_), autoshow(autoshow_) {
@@ -46,16 +47,98 @@ namespace ez {
         }
     }
 
-    void SetCheckboxStyle(CheckboxMode mode)
+    void RenderUIElements(const UIElement& e)
     {
-        g_CheckboxMode = mode;
-    }
+        switch (e.type) {
+        case ElementType::Toggle:
+        {
+            #ifdef USE_EZ_WIDGETS
 
-    CheckboxMode GetCheckboxStyle()
-    {
-        return g_CheckboxMode;
-    }
+            switch (e.styleValue)
+            {
+            case CheckboxStyle::ToggleSwitch:
+                ezWidgets::ToggleSwitch(e.label.c_str(), e.boolValue);
+                break;
+            case CheckboxStyle::Anim1:
+                ezWidgets::CheckboxAnim1(e.label.c_str(), e.boolValue);
+                break;
+            case CheckboxStyle::Anim2:
+                ezWidgets::CheckboxAnim2(e.label.c_str(), e.boolValue);
+                break;
+            case CheckboxStyle::ImGuiDefault:
+            default:
+                ImGui::Checkbox(e.label.c_str(), e.boolValue);
+                break;
+            }
 
+            #else
+            ImGui::Checkbox(e.label.c_str(), e.boolValue);
+            #endif
+
+            break;
+        }
+        case ElementType::Slider:
+            ImGui::SliderFloat(e.label.c_str(), e.value, e.min, e.max);
+            break;
+        case ElementType::ColorPicker:
+            ImGui::ColorEdit4(e.label.c_str(), (float*)e.colorValue, ImGuiColorEditFlags_NoInputs);
+            break;
+        case ElementType::Label:
+            ImGui::Text("%s", e.label.c_str());
+            break;
+        case ElementType::ComboBox:
+            #ifdef USE_EZ_WIDGETS
+
+            switch (e.comboStyle)
+            {
+            case ComboBoxStyle::Style1:
+                ezWidgets::comboBoxHelper1(e.label.c_str(), e.comboData.currentItem, e.comboData.items, e.comboData.itemsCount, e.comboData.heightInItems);
+                break;
+            case ComboBoxStyle::ImGuiDefault:
+            default:
+                const char* preview_value = nullptr;
+                if (e.comboData.currentItem && *e.comboData.currentItem >= 0 && *e.comboData.currentItem < e.comboData.itemsCount)
+                    preview_value = e.comboData.items[*e.comboData.currentItem];
+
+                if (ImGui::BeginCombo(e.label.c_str(), preview_value, 0))
+                {
+                    for (int n = 0; n < e.comboData.itemsCount; n++)
+                    {
+                        const bool is_selected = (*e.comboData.currentItem == n);
+                        if (ImGui::Selectable(e.comboData.items[n], is_selected))
+                            *e.comboData.currentItem = n;
+
+                        if (is_selected)
+                            ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+                break;
+            }
+
+            #else
+            const char* preview_value = nullptr;
+            if (e.comboData.currentItem && *e.comboData.currentItem >= 0 && *e.comboData.currentItem < e.comboData.itemsCount)
+                preview_value = e.comboData.items[*e.comboData.currentItem];
+
+            if (ImGui::BeginCombo(e.label.c_str(), preview_value, 0))
+            {
+                for (int n = 0; n < e.comboData.itemsCount; n++)
+                {
+                    const bool is_selected = (*e.comboData.currentItem == n);
+                    if (ImGui::Selectable(e.comboData.items[n], is_selected))
+                        *e.comboData.currentItem = n;
+
+                    if (is_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            #endif
+
+            break;
+        }
+    }
 
     void ez::RenderFullWidthSeparator(float thickness, ImU32 color)
     {
@@ -99,9 +182,29 @@ namespace ez {
         return tab;
     }
 
-    void TabboxTab::AddCheckbox(const char* label, bool* value) {
-        elements.emplace_back(label, value);
-    }
+    #ifdef USE_EZ_WIDGETS
+        void TabboxTab::AddCheckbox(const char* label, bool* value, CheckboxStyle style) {
+            elements.emplace_back(label, value, style);
+        }
+
+        void TabboxTab::AddCheckbox(const char* label, bool* value) {
+            elements.emplace_back(label, value, CheckboxStyle::ImGuiDefault);
+        }
+
+        void TabboxTab::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style) {
+            elements.emplace_back(label, current_item, items, height_in_items, style);
+        }
+
+    #else
+        void TabboxTab::AddCheckbox(const char* label, bool* value) {
+            elements.emplace_back(label, value);
+        }
+
+        void TabboxTab::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
+            elements.emplace_back(label, current_item, items, height_in_items);
+        }
+    #endif
+
 
     void TabboxTab::AddSlider(const char* label, float* value, float min, float max) {
         elements.emplace_back(label, value, min, max);
@@ -115,9 +218,28 @@ namespace ez {
         elements.emplace_back(label);
     }
 
-    void Tabbox::AddCheckbox(const char* label, bool* value) {
-        elements.emplace_back(label, value);
-    }
+    #ifdef USE_EZ_WIDGETS
+
+        void Tabbox::AddCheckbox(const char* label, bool* value) {
+            elements.emplace_back(label, value, CheckboxStyle::ImGuiDefault);
+        }
+
+        void Tabbox::AddCheckbox(const char* label, bool* value, CheckboxStyle style) {
+            elements.emplace_back(label, value, style);
+        }
+
+        void Tabbox::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style) {
+            elements.emplace_back(label, current_item, items, height_in_items, style);
+        }
+    #else
+        void Tabbox::AddCheckbox(const char* label, bool* value) {
+            elements.emplace_back(label, value);
+        }
+
+        void Tabbox::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
+            elements.emplace_back(label, current_item, items, height_in_items);
+        }
+    #endif
 
     void Tabbox::AddSlider(const char* label, float* value, float min, float max) {
         elements.emplace_back(label, value, min, max);
@@ -132,60 +254,28 @@ namespace ez {
     }
 
     void TabboxTab::Render() {
-        for (const auto& e : elements) {
-            switch (e.type) {
-            case ElementType::Toggle:
-            {
-                #ifdef USE_EZ_WIDGETS
-                    if (ez::g_CheckboxMode == ez::CheckboxMode::ToggleSwitch)
-                        ezWidgets::ToggleSwitch(e.label.c_str(), e.boolValue);
-                    else if (ez::g_CheckboxMode == ez::CheckboxMode::Anim1)
-                        ezWidgets::CheckboxAnim1(e.label.c_str(), e.boolValue);
-                    else if (ez::g_CheckboxMode == ez::CheckboxMode::Anim2)
-                        ezWidgets::CheckboxAnim2(e.label.c_str(), e.boolValue);
-                    else
-                        ImGui::Checkbox(e.label.c_str(), e.boolValue); // fall back to default
-                #else // USE_EZ_WIDGETS
-                    ImGui::Checkbox(e.label.c_str(), e.boolValue);
-                #endif
-
-                break;
-            }
-            case ElementType::Slider:
-                ImGui::SliderFloat(e.label.c_str(), e.value, e.min, e.max);
-                break;
-            case ElementType::ColorPicker:
-                ImGui::ColorEdit4(e.label.c_str(), (float*)e.colorValue, ImGuiColorEditFlags_NoInputs);
-                break;
-            case ElementType::Label:
-                ImGui::Text("%s", e.label.c_str());
-                break;
-            }
+        for (auto& e : elements) {
+            RenderUIElements(e);
         }
     }
 
     void Tabbox::RenderExtras() {
         for (const auto& e : elements) {
-            switch (e.type) {
-            case ElementType::Toggle:
-                ImGui::Checkbox(e.label.c_str(), e.boolValue);
-                break;
-            case ElementType::Slider:
-                ImGui::SliderFloat(e.label.c_str(), e.value, e.min, e.max);
-                break;
-            case ElementType::ColorPicker:
-                ImGui::ColorEdit4(e.label.c_str(), (float*)e.colorValue, ImGuiColorEditFlags_NoInputs);
-                break;
-            case ElementType::Label:
-                ImGui::Text("%s", e.label.c_str());
-                break;
-            }
+            RenderUIElements(e);
         }
     }
 
     void Window::Render() {
 
         ImGuiStyle& style = ImGui::GetStyle();
+
+        if (center) { // start menu centered
+            ImVec2 centerPos = ImGui::GetMainViewport()->GetCenter();
+            auto tempSize = ImVec2(size.x * 0.5f, size.y * 0.5f);
+            centerPos.x = centerPos.x - tempSize.x;
+            centerPos.y = centerPos.y - tempSize.y;
+            ImGui::SetNextWindowPos(centerPos, ImGuiCond_FirstUseEver);
+        }
 
         ImGui::SetNextWindowSize(size, ImGuiCond_FirstUseEver);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ez::winBackgroundColor);
@@ -217,16 +307,55 @@ namespace ez {
                 TabboxSide currentSide = (sideIndex == 0) ? TabboxSide::Left : TabboxSide::Right;
                 for (auto& tabbox : tab->tabboxes) {
                     if (tabbox->side == currentSide) {
-                        
+
+                        int& currentIndex = tabboxStates[tabbox->name];
+                        int visibleIndex = currentIndex;
+                        int elementCount = 0;
+                        if (!tabbox->tabs.empty() && visibleIndex >= 0 && visibleIndex < tabbox->tabs.size()) {
+                            elementCount = static_cast<int>(tabbox->tabs[visibleIndex]->elements.size());
+                        }
+                        else {
+                            elementCount = static_cast<int>(tabbox->elements.size());
+                        }
+
+                        float itemHeight = ImGui::GetFrameHeightWithSpacing(); // standard height per item
+                        float headerHeight = ImGui::GetTextLineHeightWithSpacing(); // for the tabbox label
+
+                        float separatorSpacing = 2 * ImGui::GetStyle().ItemSpacing.y; // 2 separators (top + below tabs)
+                        float tabButtonRowHeight = 0.0f;
+
+                        if (!tabbox->tabs.empty()) {
+                            tabButtonRowHeight = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y * 2.5f;
+                        }
+
+                        float tabboxHeight = headerHeight + separatorSpacing + tabButtonRowHeight;
+
+                        for (const auto& e : (!tabbox->tabs.empty() && visibleIndex >= 0 && visibleIndex < tabbox->tabs.size())
+                            ? tabbox->tabs[visibleIndex]->elements
+                            : tabbox->elements)
+                        {
+                            switch (e.type)
+                            {
+                            case ElementType::ComboBox:
+                                tabboxHeight += itemHeight * (e.comboData.heightInItems + 1) + 65.f; // more generous for dropdown
+                                break;
+                            case ElementType::ColorPicker:
+                                tabboxHeight += itemHeight * 1.0f; // color pickers are taller
+                                break;
+                            default:
+                                tabboxHeight += itemHeight;
+                                break;
+                            }
+                        }
+
                         // 41.f / 255.f, 74.f / 255.f, 122.f / 255.f, 1
                         ImGui::PushStyleColor(ImGuiCol_ChildBg, ez::tbxBackgroundColor);
                         ImGui::PushStyleColor(ImGuiCol_Border, ez::tbxBorderColor);
-                        ImGui::BeginChild(tabbox->name.c_str(), ImVec2(0, 200), true);
+                        ImGui::BeginChild(tabbox->name.c_str(), ImVec2(0, tabboxHeight), true);
                         ImGui::Text("%s", tabbox->name.c_str());
 
                         RenderFullWidthSeparator();
 
-                        int& currentIndex = tabboxStates[tabbox->name];
                         float buttonWidth = ImGui::GetContentRegionAvail().x / std::max(1, (int)tabbox->tabs.size());
                         for (int i = 0; i < tabbox->tabs.size(); ++i) {
                             ImGui::PushID(i);

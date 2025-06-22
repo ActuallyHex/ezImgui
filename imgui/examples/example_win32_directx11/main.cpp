@@ -82,8 +82,8 @@ int main(int, char**)
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != nullptr);
-    //ez::LoadFont("default", "C:/Windows/Fonts/segoeui.ttf", 17.0f);
-    ez::LoadFont("mono", "C:/Windows/Fonts/consola.ttf", 13.0f);
+    ez::LoadFont("default", "C:/Windows/Fonts/segoeui.ttf", 17.0f);
+    //ez::LoadFont("mono", "C:/Windows/Fonts/consola.ttf", 13.0f);
     //ez::LoadFontFromMemory("pixel", pixelFONT, sizeof(pixelFONT), 15.0f);
 
     // Our state
@@ -137,11 +137,13 @@ int main(int, char**)
         static auto side = ez::TabboxSide::Left;
         static bool myToggle = false;
         static bool myToggle2 = false;
+        static bool myToggle3 = false;
+        static bool myToggle4 = false;
+        static int myChoice = 0;
         static float mySlider = 0.0f;
         static ImVec4 myColor = ImVec4(1, 0, 0, 1);
-        
 
-        auto myWindow = ez::CreateEzWindow("Test Window", ImVec2(500, 300), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar, true);
+        auto myWindow = ez::CreateEzWindow("Test Window", ImVec2(500, 500), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse, true);
         auto tab1 = myWindow->AddTab("First");
         auto tab2 = myWindow->AddTab("Second");
         auto tab3 = myWindow->AddTab("Third");
@@ -152,17 +154,16 @@ int main(int, char**)
         tbbx1->AddLabel("Avacados");
         tbbx1->AddLabel("Bananas");
         tbbx1->AddCheckbox("Checkmark", &myToggle);
-        tbbx1->AddColorPicker("Color 1", &myColor);
-        tbbx1->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
+        //tbbx1->AddColorPicker("Color 1", &myColor);
+        //tbbx1->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
 
         auto tbbx2 = tab1->AddTabbox("Tabbox 2", ez::TabboxSide::Right);
         tbbx2->AddColorPicker("Color 1", &myColor);
         tbbx2->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
-        tbbx2->AddCheckbox("Checkmark", &myToggle2);
+        tbbx2->AddCheckbox("Checkmark", &myToggle2, ez::CheckboxStyle::Anim2);
         tbbx2->AddLabel("Tomatoes");
         tbbx2->AddLabel("Cucumbers");
         
-
         for (int i = 0; i < 15; i++)
         {
             std::string nameL = "Tabbox Left: " + std::to_string(i + 1);
@@ -175,20 +176,19 @@ int main(int, char**)
         auto tb3bx1 = tab3->AddTabbox("Tabbox 1", ez::TabboxSide::Left);
         auto tb3Tab1 = tb3bx1->AddTab("1");
         tb3Tab1->AddLabel("Test label Tab 1");
-        tb3Tab1->AddCheckbox("1 Test", &myToggle);
+        //tb3Tab1->AddCheckbox("1 Test", &myToggle);
+        tb3Tab1->AddCheckbox("1 Test", &myToggle, ez::CheckboxStyle::ImGuiDefault);
+        tb3Tab1->AddComboBox("My Combo Box", &myChoice, {"One", "Two", "Three"}, -1, ez::ComboBoxStyle::Style1);
 
         auto tb3Tab2 = tb3bx1->AddTab("2");
         tb3Tab2->AddLabel("Test label Tab 2");
-        ez::SetCheckboxStyle(ez::CheckboxMode::Anim1);
-        tb3Tab2->AddCheckbox("Test 1", &myToggle2);
-        ez::SetCheckboxStyle(ez::CheckboxMode::ToggleSwitch);
-        tb3Tab2->AddCheckbox("Test 2", &myToggle);
+        tb3Tab2->AddCheckbox("Test 1", &myToggle);
+        tb3Tab2->AddCheckbox("Test 2", &myToggle2, ez::CheckboxStyle::Anim1);
+        tb3Tab2->AddCheckbox("Test 3", &myToggle3, ez::CheckboxStyle::Anim2);
+        tb3Tab2->AddCheckbox("Test 4", &myToggle4, ez::CheckboxStyle::ToggleSwitch);
 
         auto settingsColorTab = settingsTab->AddTabbox("Menu Colors"); // 
         settingsColorTab->AddColorPicker("Tabbox Border Color", &ez::tbxBorderColor);
-        //
-        //style.Colors[ImGuiCol_Separator] = accentColor;
-
         settingsColorTab->AddColorPicker("Tabbox Background Color", &ez::tbxBackgroundColor);
         settingsColorTab->AddColorPicker("Window Background Color", &ez::winBackgroundColor);
 
