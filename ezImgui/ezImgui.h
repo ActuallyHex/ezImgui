@@ -28,23 +28,6 @@ namespace ez {
         Style2
     };
 
-    inline std::unordered_map<std::string, ImFont*> fonts;
-    inline std::string currentFontName = "default";
-    inline ImVec4 tbxBackgroundColor = ImVec4(0.102f, 0.103f, 0.103f, 1.00f);
-    inline ImVec4 winBackgroundColor = ImVec4(0.069f, 0.069f, 0.069f, 1.00f);
-    inline ImVec4 tbxBorderColor = ImVec4(0.275f, 0.275f, 0.275f, 1.00f);
-
-    inline WidgetMode g_WidgetMode = WidgetMode::FancyWidgets;
-
-    inline float minTabboxHeight = 100.0f;
-    inline float maxTabboxHeight = 400.0f;
-    inline float elementHeight = 26.0f;
-
-    void LoadFont(const std::string& name, const char* path, float size);
-    void LoadFontFromMemory(const std::string& name, void* data, int size_bytes, float size_pixels);
-    void SetFont(const std::string& name);
-    void RenderFullWidthSeparator(float thickness = 1.0f, ImU32 color = 0xFF444444);
-
     enum class TabboxSide {
         Left,
         Right
@@ -57,6 +40,30 @@ namespace ez {
         Label,
         ComboBox
     };
+
+    enum class TabMode {
+        ImGuiTabs,
+        ButtonTabs
+    };
+
+    inline std::unordered_map<std::string, ImFont*> fonts;
+    inline std::string currentFontName = "default";
+    inline ImVec4 tbxBackgroundColor = ImVec4(0.102f, 0.103f, 0.103f, 1.00f);
+    inline ImVec4 winBackgroundColor = ImVec4(0.069f, 0.069f, 0.069f, 1.00f);
+    inline ImVec4 tbxBorderColor = ImVec4(0.275f, 0.275f, 0.275f, 1.00f);
+
+    inline WidgetMode g_WidgetMode = WidgetMode::FancyWidgets;
+    inline TabMode g_TabMode = TabMode::ImGuiTabs;
+
+    inline float minTabboxHeight = 100.0f;
+    inline float maxTabboxHeight = 400.0f;
+    inline float elementHeight = 26.0f;
+
+    void LoadFont(const std::string& name, const char* path, float size);
+    void LoadFontFromMemory(const std::string& name, void* data, int size_bytes, float size_pixels);
+    void SetFont(const std::string& name);
+    void RenderFullWidthSeparator(float thickness = 1.0f, ImU32 color = 0xFF444444);
+    bool ImGuiComboBox(const char* label, std::unordered_map<int, bool>* data, std::vector<const char*> items);
 
     struct UIElement {
         ElementType type;
@@ -179,6 +186,7 @@ namespace ez {
         bool isOpen = true;
         ImVec2 size;
         ImGuiWindowFlags flags;
+        TabMode tabMode = TabMode::ImGuiTabs;
 
         Window(const char* title_, ImVec2 size_, ImGuiWindowFlags flags_, bool autoshow_);
         std::shared_ptr<Tab> AddTab(const char* name);

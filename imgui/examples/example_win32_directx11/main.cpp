@@ -91,6 +91,7 @@ int main(int, char**)
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+
     // Main loop
     bool done = false;
     while (!done)
@@ -144,6 +145,7 @@ int main(int, char**)
         static ImVec4 myColor = ImVec4(1, 0, 0, 1);
 
         auto myWindow = ez::CreateEzWindow("Test Window", ImVec2(500, 500), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse, true);
+        myWindow->tabMode = ez::TabMode::ButtonTabs;
         auto tab1 = myWindow->AddTab("First");
         auto tab2 = myWindow->AddTab("Second");
         auto tab3 = myWindow->AddTab("Third");

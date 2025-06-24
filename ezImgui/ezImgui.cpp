@@ -28,7 +28,7 @@ namespace ez {
     {
         ImGuiIO& io = ImGui::GetIO();
         ImFontConfig font_cfg;
-        font_cfg.FontDataOwnedByAtlas = false; // don't let ImGui delete your memory
+        font_cfg.FontDataOwnedByAtlas = false; // don't let ImGui delete our memory
 
         ImFont* font = io.Fonts->AddFontFromMemoryTTF(data, size_bytes, size_pixels, &font_cfg);
         if (font) {
@@ -154,7 +154,7 @@ namespace ez {
         window->DrawList->AddLine(ImVec2(startX, separatorY), ImVec2(endX, separatorY), color, thickness);
 
         // Optional
-        ImGui::Dummy(ImVec2(0.0f, thickness + g.Style.ItemSpacing.y - 2.0f));
+        ImGui::Dummy(ImVec2(0.0f, thickness));
     }
 
     std::shared_ptr<Tab> Window::AddTab(const char* name) {
@@ -280,23 +280,62 @@ namespace ez {
         ImGui::SetNextWindowSize(size, ImGuiCond_FirstUseEver);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ez::winBackgroundColor);
         ImGui::Begin(title.c_str(), &isOpen, flags);
+        static int testBar = 0;
+        ImVec2 contentSize;
 
         //style.Colors[ImGuiCol_CheckMark] = accentColor;
 
         if (fonts.contains(currentFontName))
             ImGui::PushFont(fonts[currentFontName]);
 
-        if (ImGui::BeginTabBar("##tabs")) {
-            for (int i = 0; i < tabNames.size(); ++i) {
-                if (ImGui::BeginTabItem(tabNames[i].c_str())) {
-                    currentTab = i;
-                    ImGui::EndTabItem();
+
+        if (!tabNames.empty())
+        {
+            if (tabMode == TabMode::ImGuiTabs)
+            {
+                contentSize = ImVec2(size.x - 15, size.y - 66);
+
+                if (ImGui::BeginTabBar("##tabs")) {
+                    for (int i = 0; i < tabNames.size(); i++) {
+                        if (ImGui::BeginTabItem(tabNames[i].c_str())) {
+                            testBar = static_cast<int>(i);
+                            ImGui::EndTabItem();
+                        }
+                    }
+                    ImGui::EndTabBar();
                 }
             }
-            ImGui::EndTabBar();
+            else if (tabMode == TabMode::ButtonTabs)
+            {
+                float buttonHeight = 30.0f;
+                float spacing = ImGui::GetStyle().ItemSpacing.x;
+                float totalWidth = ImGui::GetContentRegionAvail().x;
+                contentSize = ImVec2(size.x - 15, size.y - 76);
+
+                ImGui::BeginChild("##ButtonTabBar", ImVec2(0, buttonHeight), false);
+                for (size_t i = 0; i < tabNames.size(); i++) {
+                    if (i > 0) ImGui::SameLine();
+
+                    ImVec4 normalColor = ImVec4(0.2f, 0.2f, 0.2f, 1);
+                    ImVec4 activeColor = ImVec4(0.35f, 0.35f, 0.4f, 1);
+                    ImGui::PushStyleColor(ImGuiCol_Button, testBar == i ? activeColor : normalColor);
+
+                    if (ImGui::Button(tabNames[i].c_str())) {
+                        testBar = static_cast<int>(i);
+                    }
+
+                    ImGui::PopStyleColor();
+                }
+                ImGui::EndChild();
+
+                RenderFullWidthSeparator();
+            }
+
+
         }
 
-        ImVec2 contentSize = ImVec2(size.x - 15, size.y - 60);
+        currentTab = testBar;
+
         ImGui::BeginChild("##MainFrame", contentSize, true);
         {
             auto& tab = tabs[currentTab];
@@ -314,7 +353,8 @@ namespace ez {
                         if (!tabbox->tabs.empty() && visibleIndex >= 0 && visibleIndex < tabbox->tabs.size()) {
                             elementCount = static_cast<int>(tabbox->tabs[visibleIndex]->elements.size());
                         }
-                        else {
+                        else 
+                        {
                             elementCount = static_cast<int>(tabbox->elements.size());
                         }
 
@@ -324,7 +364,8 @@ namespace ez {
                         float separatorSpacing = 2 * ImGui::GetStyle().ItemSpacing.y; // 2 separators (top + below tabs)
                         float tabButtonRowHeight = 0.0f;
 
-                        if (!tabbox->tabs.empty()) {
+                        if (!tabbox->tabs.empty()) 
+                        {
                             tabButtonRowHeight = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y * 2.5f;
                         }
 
@@ -340,10 +381,10 @@ namespace ez {
                                 tabboxHeight += itemHeight * (e.comboData.heightInItems + 1) + 65.f; // more generous for dropdown
                                 break;
                             case ElementType::ColorPicker:
-                                tabboxHeight += itemHeight * 1.0f; // color pickers are taller
+                                tabboxHeight += itemHeight * 1.15f; // color pickers are taller
                                 break;
                             case ElementType::Toggle:
-                                tabboxHeight += (itemHeight * 1.19f) - (elementCount);
+                                tabboxHeight += (itemHeight * 1.25f) - (elementCount);
                                 break;
                             default:
                                 tabboxHeight += itemHeight;
@@ -408,4 +449,4 @@ namespace ez {
         ImGui::End();
     }
 
-} // namespace ez
+}
