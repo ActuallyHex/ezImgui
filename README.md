@@ -1,6 +1,10 @@
-### EzImgui & EzWidgets
+### EzImgui 
 
-EzImgui is an extension that utilizes the ImGui graphical interface library and makes the experience of developing your own user interface much easier. Adding onto EzImgui is EzWidgets, this is a system that works with EzImgui to allow for customization and use of different element themes and styles. 
+EzImgui is an extension that utilizes the ImGui graphical interface library and makes the experience of developing your own user interface much easier. 
+
+### EzWidgets
+
+EzWidgets is a system that works with EzImgui to allow for customization and use of different element themes and styles.
 
 *EzWidgets is NOT required in order to use EzImgui.*
 
