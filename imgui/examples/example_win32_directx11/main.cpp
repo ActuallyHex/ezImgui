@@ -30,6 +30,7 @@ void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 int currentTab = 0;
+std::shared_ptr<std::unordered_map<int, bool>> perms = std::make_shared<std::unordered_map<int, bool>>();
 
 // Main code
 int main(int, char**)
@@ -163,11 +164,12 @@ int main(int, char**)
         tbbx3->AddLabel("Look up!");
         tbbx3->AddCheckbox("Hey!", &myToggle3);
         tbbx3->AddCheckbox("Tabbox", &myToggle4);
+        tbbx3->AddCheckbox("Listen!", &myToggle);
 
         auto tbbx4 = tab1->AddTabbox("Up Again", ez::TabboxSide::Left);
         tbbx4->AddLabel("Length");
         tbbx4->AddLabel("Testing");
-
+        tbbx4->AddMultiComboBox("Permissions", { "Read", "Write", "Execute", "Delete" }, perms);
 
         auto tbbx2 = tab1->AddTabbox("Tabbox 2", ez::TabboxSide::Right);
         tbbx2->AddColorPicker("Color 1", &myColor);
@@ -200,7 +202,9 @@ int main(int, char**)
         tb3Tab2->AddCheckbox("Test 3", &myToggle3);
         tb3Tab2->AddCheckbox("Test 4", &myToggle4);
 
-        auto settingsColorTab = settingsTab->AddTabbox("Menu Colors"); // 
+        auto tb3Tab3 = tb3bx1->AddTab("hi");
+
+        auto settingsColorTab = settingsTab->AddTabbox("Menu Colors");
         settingsColorTab->AddColorPicker("Tabbox Border Color", &ez::tbxBorderColor);
         settingsColorTab->AddColorPicker("Tabbox Background Color", &ez::tbxBackgroundColor);
         settingsColorTab->AddColorPicker("Window Background Color", &ez::winBackgroundColor);

@@ -10,11 +10,6 @@
 
 namespace ez {
 
-    enum class WidgetMode {
-        ImGuiDefault,
-        FancyWidgets
-    };
-
     enum class CheckboxStyle {
         ImGuiDefault,
         ToggleSwitch,
@@ -38,7 +33,8 @@ namespace ez {
         Slider,
         ColorPicker,
         Label,
-        ComboBox
+        ComboBox,
+        MultiComboBox
     };
 
     enum class TabMode {
@@ -52,7 +48,6 @@ namespace ez {
     inline ImVec4 winBackgroundColor = ImVec4(0.069f, 0.069f, 0.069f, 1.00f);
     inline ImVec4 tbxBorderColor = ImVec4(0.275f, 0.275f, 0.275f, 1.00f);
 
-    inline WidgetMode g_WidgetMode = WidgetMode::FancyWidgets;
     inline TabMode g_TabMode = TabMode::ImGuiTabs;
 
     inline float minTabboxHeight = 100.0f;
@@ -63,7 +58,7 @@ namespace ez {
     void LoadFontFromMemory(const std::string& name, void* data, int size_bytes, float size_pixels);
     void SetFont(const std::string& name);
     void RenderFullWidthSeparator(float thickness = 1.0f, ImU32 color = 0xFF444444);
-    bool ImGuiComboBox(const char* label, std::unordered_map<int, bool>* data, std::vector<const char*> items);
+    bool ImGuiMultiComboBox(const char* label, std::unordered_map<int, bool>* data, std::vector<const char*> items);
 
     struct UIElement {
         ElementType type;
@@ -71,6 +66,9 @@ namespace ez {
         ComboBoxStyle comboStyle;
         std::string label;
         std::vector<std::string> comboItemsStorage;
+        std::shared_ptr<std::unordered_map<int, bool>> multiComboData; // for MultiComboBox
+        std::vector<const char*> multiComboRawItems;
+
         union {
             bool* boolValue;
             struct { float* value; float min; float max; };
@@ -126,6 +124,14 @@ namespace ez {
         UIElement(const std::string& lbl)
             : type(ElementType::Label), label(lbl) {
         }
+
+        UIElement(const std::string& lbl, std::initializer_list<const char*> itemsList, std::shared_ptr<std::unordered_map<int, bool>> data)
+            : type(ElementType::MultiComboBox), label(lbl), multiComboData(std::move(data)) {
+            comboItemsStorage.assign(itemsList.begin(), itemsList.end());
+            multiComboRawItems.reserve(comboItemsStorage.size());
+            for (const auto& s : comboItemsStorage)
+                multiComboRawItems.push_back(s.c_str());
+        }
     };
 
     struct TabboxTab {
@@ -137,6 +143,7 @@ namespace ez {
         void AddSlider(const char* label, float* value, float min, float max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
+        void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
         
         #ifdef USE_EZ_WIDGETS
             void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);
@@ -160,6 +167,7 @@ namespace ez {
         void AddSlider(const char* label, float* value, float min, float max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
+        void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
 
         #ifdef USE_EZ_WIDGETS
             void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);
@@ -195,6 +203,5 @@ namespace ez {
 
     std::shared_ptr<Window> CreateEzWindow(const char* title, ImVec2 size, ImGuiWindowFlags flags = ImGuiWindowFlags_None, bool autoshow = true);
 
-    extern WidgetMode g_WidgetMode;
 }
 

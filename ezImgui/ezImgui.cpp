@@ -45,6 +45,46 @@ namespace ez {
         }
     }
 
+    bool ImGuiMultiComboBox(const char* label, std::unordered_map<int, bool>* data, std::vector<const char*> items)
+    {
+        std::unordered_map<int, bool> old_data = *data;
+
+        static auto howmuchsel = [](const std::unordered_map<int, bool>& e) -> int {
+            int s = 0;
+            for (const auto& [i, selected] : e)
+                if (selected) ++s;
+            return s;
+            };
+
+        std::string selected_items_str;
+        for (int i = 0; i < items.size(); ++i)
+        {
+            if ((*data)[i])
+            {
+                if (!selected_items_str.empty())
+                    selected_items_str += ", ";
+                selected_items_str += items[i];
+            }
+        }
+
+        const char* preview_value = selected_items_str.empty() ? "none" : selected_items_str.c_str();
+
+        if (ImGui::BeginCombo(label, preview_value))
+        {
+            for (int i = 0; i < items.size(); ++i)
+            {
+                bool is_selected = (*data)[i];
+                if (ImGui::Selectable(items[i], is_selected, ImGuiSelectableFlags_DontClosePopups))
+                {
+                    (*data)[i] = !(*data)[i]; // Toggle selection state
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        return *data != old_data;
+    }
+
     void RenderUIElements(const UIElement& e)
     {
         switch (e.type) {
@@ -80,6 +120,9 @@ namespace ez {
             break;
         case ElementType::ColorPicker:
             ImGui::ColorEdit4(e.label.c_str(), (float*)e.colorValue, ImGuiColorEditFlags_NoInputs);
+            break;
+        case ElementType::MultiComboBox:
+            ImGuiMultiComboBox(e.label.c_str(), e.multiComboData.get(), e.multiComboRawItems);
             break;
         case ElementType::Label:
             ImGui::Text("%s", e.label.c_str());
@@ -218,6 +261,10 @@ namespace ez {
         elements.emplace_back(label);
     }
 
+    void TabboxTab::AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data) {
+        elements.emplace_back(label, items, data);
+    }
+
     #ifdef USE_EZ_WIDGETS
 
         void Tabbox::AddCheckbox(const char* label, bool* value) {
@@ -251,6 +298,10 @@ namespace ez {
 
     void Tabbox::AddLabel(const char* label) {
         elements.emplace_back(label);
+    }
+
+    void Tabbox::AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data) {
+        elements.emplace_back(label, items, data);
     }
 
     void TabboxTab::Render() {
@@ -392,7 +443,7 @@ namespace ez {
                             }
                         }
 
-                        if (elementCount == 0) // element list is empty. 
+                        if (elementCount == 0)
                             tabboxHeight += itemHeight * 0.79f;
 
                         ImGui::PushStyleColor(ImGuiCol_ChildBg, ez::tbxBackgroundColor);
