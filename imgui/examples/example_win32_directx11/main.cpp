@@ -31,7 +31,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 int currentTab = 0;
 std::shared_ptr<std::unordered_map<int, bool>> perms = std::make_shared<std::unordered_map<int, bool>>();
-
+std::shared_ptr<std::unordered_map<int, bool>> numbers = std::make_shared<std::unordered_map<int, bool>>();
 // Main code
 int main(int, char**)
 {
@@ -143,10 +143,12 @@ int main(int, char**)
         static bool myToggle4 = false;
         static int myChoice = 0;
         static float mySlider = 0.0f;
+        static int myIntSlider = 0;
         static ImVec4 myColor = ImVec4(1, 0, 0, 1);
 
         auto myWindow = ez::CreateEzWindow("Test Window", ImVec2(500, 500), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse, true);
         myWindow->tabMode = ez::TabMode::ButtonTabs;
+        myWindow->style.ScrollbarSize = 1.3f;
         auto tab1 = myWindow->AddTab("First");
         auto tab2 = myWindow->AddTab("Second");
         auto tab3 = myWindow->AddTab("Third");
@@ -165,16 +167,16 @@ int main(int, char**)
         tbbx3->AddCheckbox("Hey!", &myToggle3);
         tbbx3->AddCheckbox("Tabbox", &myToggle4);
         tbbx3->AddCheckbox("Listen!", &myToggle);
+        tbbx3->AddCheckboxColorPicker("Another one!", &myToggle2, &myColor);
 
-        auto tbbx4 = tab1->AddTabbox("Up Again", ez::TabboxSide::Left);
+        auto tbbx4 = tab1->AddTabbox("Up Again", ez::TabboxSide::Right);
         tbbx4->AddLabel("Length");
         tbbx4->AddLabel("Testing");
         tbbx4->AddMultiComboBox("Permissions", { "Read", "Write", "Execute", "Delete" }, perms);
 
         auto tbbx2 = tab1->AddTabbox("Tabbox 2", ez::TabboxSide::Right);
         tbbx2->AddColorPicker("Color 1", &myColor);
-        tbbx2->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
-        //tbbx2->AddCheckbox("Checkmark", &myToggle2, ez::CheckboxStyle::Anim2);
+        tbbx2->AddSlider("Slider Int", &myIntSlider, 0, 100);
         tbbx2->AddLabel("Tomatoes");
         tbbx2->AddLabel("Cucumbers");
         
@@ -190,9 +192,7 @@ int main(int, char**)
         auto tb3bx1 = tab3->AddTabbox("Tabbox 1", ez::TabboxSide::Left);
         auto tb3Tab1 = tb3bx1->AddTab("1");
         tb3Tab1->AddLabel("Test label Tab 1");
-        //tb3Tab1->AddCheckbox("1 Test", &myToggle);
         tb3Tab1->AddCheckbox("1 Test", &myToggle);
-        //tb3Tab1->AddComboBox("My Combo Box", &myChoice, {"One", "Two", "Three"}, -1);
         tb3Tab1->AddComboBox("My combo", &myChoice, {"one", "two", "three"}, -1);
 
         auto tb3Tab2 = tb3bx1->AddTab("2");
@@ -202,7 +202,11 @@ int main(int, char**)
         tb3Tab2->AddCheckbox("Test 3", &myToggle3);
         tb3Tab2->AddCheckbox("Test 4", &myToggle4);
 
-        auto tb3Tab3 = tb3bx1->AddTab("hi");
+        auto tb3Tab3 = tb3bx1->AddTab("3");
+        tb3Tab3->AddMultiComboBox("Numbers", { "One", "Two", "Three", "Four", "Five"}, numbers);
+        
+
+        auto tb3bx2 = tab3->AddTabbox("Testing Tabbox", ez::TabboxSide::Left);
 
         auto settingsColorTab = settingsTab->AddTabbox("Menu Colors");
         settingsColorTab->AddColorPicker("Tabbox Border Color", &ez::tbxBorderColor);

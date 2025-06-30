@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <variant>
 
-#define USE_EZ_WIDGETS
+//#define USE_EZ_WIDGETS
 
 namespace ez {
 
@@ -30,11 +30,14 @@ namespace ez {
 
     enum class ElementType {
         Toggle,
-        Slider,
+        SliderFloat,
+        SliderInt,
         ColorPicker,
         Label,
         ComboBox,
-        MultiComboBox
+        MultiComboBox,
+        ToggleColorPicker,
+        LabelColorPicker
     };
 
     enum class TabMode {
@@ -71,8 +74,10 @@ namespace ez {
 
         union {
             bool* boolValue;
-            struct { float* value; float min; float max; };
+            struct { float* valueFloat; float minFloat; float maxFloat; };
+            struct { int* valueInt; int minInt; int maxInt; };
             ImVec4* colorValue;
+            struct { bool* boolVal; ImVec4* clrVal; };
             struct { int* currentItem; const char* const* items; int itemsCount; int heightInItems; } comboData;
         };
 
@@ -84,6 +89,9 @@ namespace ez {
         #else
         UIElement(const std::string& lbl, bool* val)
             : type(ElementType::Toggle), label(lbl), boolValue(val) {
+        }
+        UIElement(const std::string& lbl, bool* val, ImVec4* clr)
+            : type(ElementType::ToggleColorPicker), label(lbl), boolVal(val), clrVal(clr) {
         }
         #endif
 
@@ -115,8 +123,12 @@ namespace ez {
             comboData.items = tempPointers.data();
         }
         UIElement(const std::string& lbl, float* val, float mi, float ma)
-            : type(ElementType::Slider), label(lbl) {
-            value = val; min = mi; max = ma;
+            : type(ElementType::SliderFloat), label(lbl) {
+            valueFloat = val; minFloat = mi; maxFloat = ma;
+        }
+        UIElement(const std::string& lbl, int* val, int mi, int ma)
+            : type(ElementType::SliderInt), label(lbl) {
+            valueInt = val; minInt = mi; maxInt = ma;
         }
         UIElement(const std::string& lbl, ImVec4* col)
             : type(ElementType::ColorPicker), label(lbl), colorValue(col) {
@@ -140,7 +152,9 @@ namespace ez {
 
         void AddCheckbox(const char* label, bool* value);
         void AddCheckbox(const char* label, bool* value, CheckboxStyle style);
+        void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color);
         void AddSlider(const char* label, float* value, float min, float max);
+        void AddSlider(const char* label, int* value, int min, int max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
         void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
@@ -164,7 +178,9 @@ namespace ez {
         std::shared_ptr<TabboxTab> AddTab(const char* name);
         void AddCheckbox(const char* label, bool* value);
         void AddCheckbox(const char* label, bool* value, CheckboxStyle style);
+        void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color);
         void AddSlider(const char* label, float* value, float min, float max);
+        void AddSlider(const char* label, int* value, int min, int max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
         void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
@@ -194,6 +210,7 @@ namespace ez {
         bool isOpen = true;
         ImVec2 size;
         ImGuiWindowFlags flags;
+        ImGuiStyle& style = ImGui::GetStyle();
         TabMode tabMode = TabMode::ImGuiTabs;
 
         Window(const char* title_, ImVec2 size_, ImGuiWindowFlags flags_, bool autoshow_);

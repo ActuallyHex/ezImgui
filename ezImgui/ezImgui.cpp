@@ -115,12 +115,26 @@ namespace ez {
 
             break;
         }
-        case ElementType::Slider:
-            ImGui::SliderFloat(e.label.c_str(), e.value, e.min, e.max);
+        case ElementType::SliderFloat:
+            ImGui::SliderFloat(e.label.c_str(), e.valueFloat, e.minFloat, e.maxFloat);
+            break;
+        case ElementType::SliderInt:
+            ImGui::SliderInt(e.label.c_str(), e.valueInt, e.minInt, e.maxInt);
             break;
         case ElementType::ColorPicker:
             ImGui::ColorEdit4(e.label.c_str(), (float*)e.colorValue, ImGuiColorEditFlags_NoInputs);
             break;
+        case ElementType::ToggleColorPicker:
+        {
+            ImGui::Checkbox(e.label.c_str(), e.boolVal);
+
+            float fullWidth = ImGui::GetContentRegionAvail().x;
+            float colorPickerWidth = 25.0f; // approximate width of color picker (can tweak as needed)
+
+            ImGui::SameLine(ImGui::GetCursorPosX() + fullWidth - colorPickerWidth);
+            ImGui::ColorEdit4(("##" + e.label).c_str(), (float*)e.clrVal, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+            break;
+        }
         case ElementType::MultiComboBox:
             ImGuiMultiComboBox(e.label.c_str(), e.multiComboData.get(), e.multiComboRawItems);
             break;
@@ -243,6 +257,11 @@ namespace ez {
             elements.emplace_back(label, value);
         }
 
+        void TabboxTab::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color)
+        {
+            elements.emplace_back(label, value, color);
+        }
+
         void TabboxTab::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
             elements.emplace_back(label, current_item, items, height_in_items);
         }
@@ -250,6 +269,11 @@ namespace ez {
 
 
     void TabboxTab::AddSlider(const char* label, float* value, float min, float max) {
+        elements.emplace_back(label, value, min, max);
+    }
+
+    void TabboxTab::AddSlider(const char* label, int* value, int min, int max)
+    {
         elements.emplace_back(label, value, min, max);
     }
 
@@ -283,6 +307,11 @@ namespace ez {
             elements.emplace_back(label, value);
         }
 
+        void Tabbox::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color)
+        {
+            elements.emplace_back(label, value, color);
+        }
+
         void Tabbox::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
             elements.emplace_back(label, current_item, items, height_in_items);
         }
@@ -294,6 +323,11 @@ namespace ez {
 
     void Tabbox::AddColorPicker(const char* label, ImVec4* color) {
         elements.emplace_back(label, color);
+    }
+
+    void Tabbox::AddSlider(const char* label, int* value, int min, int max)
+    {
+        elements.emplace_back(label, value, min, max);
     }
 
     void Tabbox::AddLabel(const char* label) {
@@ -317,8 +351,6 @@ namespace ez {
     }
 
     void Window::Render() {
-
-        ImGuiStyle& style = ImGui::GetStyle();
 
         if (center) { // start menu centered
             ImVec2 centerPos = ImGui::GetMainViewport()->GetCenter();
@@ -363,7 +395,7 @@ namespace ez {
                 float totalWidth = ImGui::GetContentRegionAvail().x;
                 contentSize = ImVec2(size.x - 15, size.y - 76);
 
-                ImGui::BeginChild("##ButtonTabBar", ImVec2(0, buttonHeight), false);
+                ImGui::BeginChild("##ButtonTabBar", ImVec2(0, buttonHeight), false);              
                 for (size_t i = 0; i < tabNames.size(); i++) {
                     if (i > 0) ImGui::SameLine();
 
@@ -436,6 +468,9 @@ namespace ez {
                                 break;
                             case ElementType::Toggle:
                                 tabboxHeight += (itemHeight * 1.25f) - (elementCount);
+                                break;
+                            case ElementType::MultiComboBox:
+                                tabboxHeight += (itemHeight * 1.35);
                                 break;
                             default:
                                 tabboxHeight += itemHeight;
