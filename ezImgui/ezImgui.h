@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include <variant>
+#include <functional>
 
 //#define USE_EZ_WIDGETS
 
@@ -37,7 +38,8 @@ namespace ez {
         ComboBox,
         MultiComboBox,
         ToggleColorPicker,
-        LabelColorPicker
+        LabelColorPicker,
+        Button
     };
 
     enum class TabMode {
@@ -45,7 +47,16 @@ namespace ez {
         ButtonTabs
     };
 
+    struct Notification {
+        std::string text;
+        float lifetime = 3.0f;
+        float age = 0.0f;
+        float slide = 0.0f;
+        float alpha = 1.0f;
+    };
+
     inline std::unordered_map<std::string, ImFont*> fonts;
+    inline std::vector<Notification> g_Notifications;
     inline std::string currentFontName = "default";
     inline ImVec4 tbxBackgroundColor = ImVec4(0.102f, 0.103f, 0.103f, 1.00f);
     inline ImVec4 winBackgroundColor = ImVec4(0.069f, 0.069f, 0.069f, 1.00f);
@@ -62,6 +73,8 @@ namespace ez {
     void SetFont(const std::string& name);
     void RenderFullWidthSeparator(float thickness = 1.0f, ImU32 color = 0xFF444444);
     bool ImGuiMultiComboBox(const char* label, std::unordered_map<int, bool>* data, std::vector<const char*> items);
+    void PushNotification(const std::string& text, float duration = 3.0f);
+    void RenderNotifications();
 
     struct UIElement {
         ElementType type;
@@ -71,6 +84,7 @@ namespace ez {
         std::vector<std::string> comboItemsStorage;
         std::shared_ptr<std::unordered_map<int, bool>> multiComboData; // for MultiComboBox
         std::vector<const char*> multiComboRawItems;
+        std::function<void()> buttonCallback;
 
         union {
             bool* boolValue;
@@ -136,6 +150,10 @@ namespace ez {
         UIElement(const std::string& lbl)
             : type(ElementType::Label), label(lbl) {
         }
+        struct ButtonTag {};
+        UIElement(const std::string& lbl, ButtonTag, std::function<void()> callback = nullptr)
+            : type(ElementType::Button), label(lbl), buttonCallback(callback) {
+        }
 
         UIElement(const std::string& lbl, std::initializer_list<const char*> itemsList, std::shared_ptr<std::unordered_map<int, bool>> data)
             : type(ElementType::MultiComboBox), label(lbl), multiComboData(std::move(data)) {
@@ -158,7 +176,8 @@ namespace ez {
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
         void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
-        
+        void AddButton(const char* label, std::function<void()> onClick = nullptr);
+
         #ifdef USE_EZ_WIDGETS
             void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);
         #else
@@ -184,6 +203,7 @@ namespace ez {
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
         void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
+        void AddButton(const char* label, std::function<void()> onClick = nullptr);
 
         #ifdef USE_EZ_WIDGETS
             void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);

@@ -1,6 +1,6 @@
 ### EzImgui 
 
-EzImgui is an extension that utilizes the ImGui graphical interface library and makes the experience of developing your own user interface much easier. 
+EzImgui is an extension that utilizes the [ImGui graphical interface library](https://github.com/ocornut/imgui) and makes the process of creating your own user interfaces much easier for those of us who dont want to mess with scaling/sizing/tab controls/etc. As it stands right now EzImgui is still very much a work in progress and has only been tested in win32_dx11. 
 
 ### EzWidgets
 
@@ -10,7 +10,7 @@ EzWidgets is a system that works with EzImgui to allow for customization and use
 
 ## Code Snippets
 
-Setting up a window is very similar to how you would regularly set it up. Each time you create a window, it needs to be rendered, forgetting to call the window to render it will cause the window to not appear.
+Setting up a window is very similar to how you would regularly set it up. Each time you create a window, it needs to be rendered, forgetting to call the window to render it will cause the window to not appear. (This section is still very messy, will be changed later)
 
 ```cpp
 #include "../ezImgui/ezImgui.h"

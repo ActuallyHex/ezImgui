@@ -173,6 +173,9 @@ int main(int, char**)
         tbbx4->AddLabel("Length");
         tbbx4->AddLabel("Testing");
         tbbx4->AddMultiComboBox("Permissions", { "Read", "Write", "Execute", "Delete" }, perms);
+        tbbx4->AddButton("Click Me", [] {
+            ez::PushNotification("Example notification!");
+        });
 
         auto tbbx2 = tab1->AddTabbox("Tabbox 2", ez::TabboxSide::Right);
         tbbx2->AddColorPicker("Color 1", &myColor);
@@ -213,6 +216,7 @@ int main(int, char**)
         settingsColorTab->AddColorPicker("Tabbox Background Color", &ez::tbxBackgroundColor);
         settingsColorTab->AddColorPicker("Window Background Color", &ez::winBackgroundColor);
 
+        ez::RenderNotifications();
         myWindow->Render();
 
         // Rendering

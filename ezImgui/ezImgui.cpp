@@ -9,6 +9,62 @@ namespace ez {
 
     static CheckboxStyle g_CheckboxMode = CheckboxStyle::ImGuiDefault;
 
+    void ez::PushNotification(const std::string& text, float duration) {
+        g_Notifications.push_back(Notification{ text, duration, 0.0f, -200.0f, 1.0f });
+    }
+
+    void ez::RenderNotifications() {
+        ImGuiIO& io = ImGui::GetIO();
+        ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
+        const float padding = 10.0f;
+        const float line_height = 26.0f;
+        const float box_rounding = 5.0f;
+        const ImU32 bg_col_base = IM_COL32(30, 30, 30, 255);
+        const ImU32 border_col_base = IM_COL32(120, 120, 120, 255);
+        const ImU32 text_col_base = IM_COL32(255, 255, 255, 255);
+
+        int index = 0;
+        for (int i = 0; i < g_Notifications.size(); ) {
+            Notification& n = g_Notifications[i];
+            n.age += io.DeltaTime;
+
+            // Fade out in the last 0.5 seconds
+            if (n.lifetime - n.age < 0.5f)
+                n.alpha = ImClamp((n.lifetime - n.age) / 0.2f, 0.0f, 1.0f);
+
+            // Slide-in animation
+            if (n.slide < 0.0f) {
+                n.slide = ImLerp(n.slide, 0.0f, ImClamp(io.DeltaTime * 10.0f, 0.0f, 1.0f));
+                if (n.slide > -1.0f) n.slide = 0.0f;  // snap to 0 when almost finished
+            }
+            if (n.slide > 0.0f)
+                n.slide = 0.0f;
+
+            ImVec2 text_size = ImGui::CalcTextSize(n.text.c_str());
+            float box_width = text_size.x + 2 * padding;
+            float box_height = text_size.y + 2 * padding;
+            ImVec2 pos = ImVec2(padding + n.slide, padding + index * (box_height + 6));
+            ImVec2 rect_min = pos;
+            ImVec2 rect_max = ImVec2(pos.x + box_width, pos.y + box_height);
+
+            ImU32 bg_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.12f, 0.12f, 0.12f, n.alpha));
+            ImU32 border_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.5f, 0.5f, 0.5f, n.alpha));
+            ImU32 text_col = ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, n.alpha));
+
+            draw_list->AddRectFilled(rect_min, rect_max, bg_col, box_rounding);
+            draw_list->AddRect(rect_min, rect_max, border_col, box_rounding);
+            draw_list->AddText(ImVec2(pos.x + padding, pos.y + padding), text_col, n.text.c_str());
+
+            if (n.age >= n.lifetime) {
+                g_Notifications.erase(g_Notifications.begin() + i);
+            }
+            else {
+                ++i;
+                ++index;
+            }
+        }
+    }
+
     Window::Window(const char* title_, ImVec2 size_, ImGuiWindowFlags flags_, bool autoshow_)
         : title(title_), size(size_), flags(flags_), autoshow(autoshow_) {
     }
@@ -140,6 +196,10 @@ namespace ez {
             break;
         case ElementType::Label:
             ImGui::Text("%s", e.label.c_str());
+            break;
+        case ElementType::Button:
+            if (ImGui::Button(e.label.c_str()) && e.buttonCallback)
+                e.buttonCallback();
             break;
         case ElementType::ComboBox:
             #ifdef USE_EZ_WIDGETS
@@ -285,6 +345,10 @@ namespace ez {
         elements.emplace_back(label);
     }
 
+    void TabboxTab::AddButton(const char* label, std::function<void()> onClick) {
+        elements.emplace_back(label, UIElement::ButtonTag{}, onClick);
+    }
+
     void TabboxTab::AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data) {
         elements.emplace_back(label, items, data);
     }
@@ -334,8 +398,13 @@ namespace ez {
         elements.emplace_back(label);
     }
 
+
     void Tabbox::AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data) {
         elements.emplace_back(label, items, data);
+    }
+
+    void Tabbox::AddButton(const char* label, std::function<void()> onClick) {
+        elements.emplace_back(label, UIElement::ButtonTag{}, onClick);
     }
 
     void TabboxTab::Render() {
