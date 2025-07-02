@@ -12,6 +12,7 @@
 #include <d3d11.h>
 #include <tchar.h>
 #include "../ezImgui/ezImgui.h"
+#include <random> // not needed by default
 //#include "../../../../../Downloads/font_array.h"
 
 // Data
@@ -32,6 +33,13 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 int currentTab = 0;
 std::shared_ptr<std::unordered_map<int, bool>> perms = std::make_shared<std::unordered_map<int, bool>>();
 std::shared_ptr<std::unordered_map<int, bool>> numbers = std::make_shared<std::unordered_map<int, bool>>();
+
+int getRandomInRange(int min, int max) { // just for debugging not supposed to be included
+    static std::mt19937 gen(static_cast<unsigned int>(std::time(nullptr)));
+    std::uniform_int_distribution<> distrib(min, max);
+    return distrib(gen);
+}
+
 // Main code
 int main(int, char**)
 {
@@ -142,11 +150,12 @@ int main(int, char**)
         static bool myToggle3 = false;
         static bool myToggle4 = false;
         static int myChoice = 0;
+        static int myChoice2 = 0;
         static float mySlider = 0.0f;
         static int myIntSlider = 0;
         static ImVec4 myColor = ImVec4(1, 0, 0, 1);
 
-        auto myWindow = ez::CreateEzWindow("Test Window", ImVec2(500, 500), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse, true);
+        auto myWindow = ez::CreateEzWindow("Test Window", ImVec2(510, 500), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse, true);
         myWindow->tabMode = ez::TabMode::ButtonTabs;
         myWindow->style.ScrollbarSize = 1.3f;
         auto tab1 = myWindow->AddTab("First");
@@ -155,66 +164,36 @@ int main(int, char**)
         auto tab4 = myWindow->AddTab("Fourth");
         auto settingsTab = myWindow->AddTab("Settings");
 
-        auto tbbx1 = tab1->AddTabbox("Tabbox 1", ez::TabboxSide::Left);
-        tbbx1->AddLabel("Avacados");
-        tbbx1->AddLabel("Bananas");
-        tbbx1->AddCheckbox("Checkmark", &myToggle);
-        tbbx1->AddColorPicker("Color 1", &myColor);
-        tbbx1->AddSlider("Slider 1", &mySlider, 0.f, 100.f);
+        auto tabbox1 = tab1->AddTabbox("Tab header 1");
 
-        auto tbbx3 = tab1->AddTabbox("Tabbox Below", ez::TabboxSide::Left);
-        tbbx3->AddLabel("Look up!");
-        tbbx3->AddCheckbox("Hey!", &myToggle3);
-        tbbx3->AddCheckbox("Tabbox", &myToggle4);
-        tbbx3->AddCheckbox("Listen!", &myToggle);
-        tbbx3->AddCheckboxColorPicker("Another one!", &myToggle2, &myColor);
+        tabbox1->AddCheckbox("Toggle 1", &myToggle);
+        tabbox1->AddCheckbox("Toggle 2", &myToggle2);
+        //tabbox1->AddCheckboxColorPicker("Toggle 3", &myToggle3, &myColor, ez::CheckboxStyle::Anim2);
+        //tabbox1->AddCheckbox("Toggle 4", &myToggle4, ez::CheckboxStyle::ToggleSwitch);
+        //tabbox1->AddSlider("Slider Int", &myIntSlider, 0, 100);
 
-        auto tbbx4 = tab1->AddTabbox("Up Again", ez::TabboxSide::Right);
-        tbbx4->AddLabel("Length");
-        tbbx4->AddLabel("Testing");
-        tbbx4->AddMultiComboBox("Permissions", { "Read", "Write", "Execute", "Delete" }, perms);
-        tbbx4->AddButton("Click Me", [] {
-            ez::PushNotification("Example notification!");
-        });
+        auto tabbox2 = tab1->AddTabbox("Tab header 2", ez::TabboxSide::Right);
 
-        auto tbbx2 = tab1->AddTabbox("Tabbox 2", ez::TabboxSide::Right);
-        tbbx2->AddColorPicker("Color 1", &myColor);
-        tbbx2->AddSlider("Slider Int", &myIntSlider, 0, 100);
-        tbbx2->AddLabel("Tomatoes");
-        tbbx2->AddLabel("Cucumbers");
-        
-        for (int i = 0; i < 15; i++)
-        {
-            std::string nameL = "Tabbox Left: " + std::to_string(i + 1);
-            tab2->AddTabbox(nameL.c_str(), ez::TabboxSide::Left);
+        tabbox2->AddButton("Notification Testing", [] {
+            int randNum = getRandomInRange(-100, 100);
+            ez::PushNotification("[SYSTEM] Config " + std::to_string(randNum) + " saved!");
 
-            std::string nameR = "Tabbox Right: " + std::to_string(i + 1);
-            tab2->AddTabbox(nameR.c_str(), ez::TabboxSide::Right);
-        }
-        
-        auto tb3bx1 = tab3->AddTabbox("Tabbox 1", ez::TabboxSide::Left);
-        auto tb3Tab1 = tb3bx1->AddTab("1");
-        tb3Tab1->AddLabel("Test label Tab 1");
-        tb3Tab1->AddCheckbox("1 Test", &myToggle);
-        tb3Tab1->AddComboBox("My combo", &myChoice, {"one", "two", "three"}, -1);
-
-        auto tb3Tab2 = tb3bx1->AddTab("2");
-        tb3Tab2->AddLabel("Test label Tab 2");
-        tb3Tab2->AddCheckbox("Test 1", &myToggle);
-        tb3Tab2->AddCheckbox("Test 2", &myToggle2);
-        tb3Tab2->AddCheckbox("Test 3", &myToggle3);
-        tb3Tab2->AddCheckbox("Test 4", &myToggle4);
-
-        auto tb3Tab3 = tb3bx1->AddTab("3");
-        tb3Tab3->AddMultiComboBox("Numbers", { "One", "Two", "Three", "Four", "Five"}, numbers);
-        
-
-        auto tb3bx2 = tab3->AddTabbox("Testing Tabbox", ez::TabboxSide::Left);
+            });
+        tabbox2->AddComboBox("Combo 1", &myChoice, { "one", "two", "three" }, -1);
+        //tabbox2->AddComboBox("Combo 1", &myChoice, { "One", "Two", "Three" }, -1);
+        //tabbox2->AddComboBox("Combo 1", &myChoice, { "one", "two", "three" }, -1);
+        //tabbox2->AddMultiComboBox("Mult Combo", { "Read", "Write", "Execute", "Delete" }, perms);
+        tabbox2->AddComboBox("Combo 22", &myChoice2, { "Choice 1", "Choice 2", "Choice 3" }, -1);
 
         auto settingsColorTab = settingsTab->AddTabbox("Menu Colors");
         settingsColorTab->AddColorPicker("Tabbox Border Color", &ez::tbxBorderColor);
         settingsColorTab->AddColorPicker("Tabbox Background Color", &ez::tbxBackgroundColor);
         settingsColorTab->AddColorPicker("Window Background Color", &ez::winBackgroundColor);
+        settingsColorTab->AddColorPicker("Frame Background Color", &ez::frameBg);
+        settingsColorTab->AddColorPicker("Frame Background Active Color", &ez::frameBgActive);
+        settingsColorTab->AddColorPicker("Frame Background Hovered Color", &ez::frameBgHovered);
+        settingsColorTab->AddColorPicker("Accent Color", &ez::accentColor);
+        settingsColorTab->AddColorPicker("Button Color", &ez::buttonColor);
 
         ez::RenderNotifications();
         myWindow->Render();

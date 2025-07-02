@@ -5,6 +5,15 @@
 #include "../ezWidgets/ezWidgets.h"
 #endif
 
+// W.I.P List
+// 1. replace shared_ptr with vector<T> or unique_ptr
+//    vector<T> might improve performance?
+//    as it is right now the wrapper isnt very performance or thread safe
+// 2. (maybe) Add way to pushfont tabboxes and its contents
+// 3. Test ezWidgets as I havent had it enabled it a bit
+// 4. Better theming options
+// 5. More drawlist features (animations, styles, etc.)
+
 namespace ez {
 
     static CheckboxStyle g_CheckboxMode = CheckboxStyle::ImGuiDefault;
@@ -17,8 +26,8 @@ namespace ez {
         ImGuiIO& io = ImGui::GetIO();
         ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
         const float padding = 10.0f;
-        const float line_height = 26.0f;
-        const float box_rounding = 5.0f;
+        const float line_height = 20.0f;
+        const float box_rounding = 0.0f;
         const ImU32 bg_col_base = IM_COL32(30, 30, 30, 255);
         const ImU32 border_col_base = IM_COL32(120, 120, 120, 255);
         const ImU32 text_col_base = IM_COL32(255, 255, 255, 255);
@@ -28,7 +37,7 @@ namespace ez {
             Notification& n = g_Notifications[i];
             n.age += io.DeltaTime;
 
-            // Fade out in the last 0.5 seconds
+            // Fade out in the last 0.2 seconds
             if (n.lifetime - n.age < 0.5f)
                 n.alpha = ImClamp((n.lifetime - n.age) / 0.2f, 0.0f, 1.0f);
 
@@ -47,12 +56,15 @@ namespace ez {
             ImVec2 rect_min = pos;
             ImVec2 rect_max = ImVec2(pos.x + box_width, pos.y + box_height);
 
-            ImU32 bg_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.12f, 0.12f, 0.12f, n.alpha));
-            ImU32 border_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.5f, 0.5f, 0.5f, n.alpha));
+            ImVec2 rect_outline_min = ImVec2(pos.x - 1.4f, pos.y - 1.4f);
+            ImVec2 rect_outline_max = ImVec2(pos.x + box_width + 1.4f, pos.y + box_height + 1.4f);
+
+            ImU32 bg_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.07f, 0.07f, 0.07f, n.alpha));
+            ImU32 border_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.17f, 0.17f, 0.17f, n.alpha));
             ImU32 text_col = ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, n.alpha));
 
             draw_list->AddRectFilled(rect_min, rect_max, bg_col, box_rounding);
-            draw_list->AddRect(rect_min, rect_max, border_col, box_rounding);
+            draw_list->AddRect(rect_outline_min, rect_outline_max, border_col, box_rounding);
             draw_list->AddText(ImVec2(pos.x + padding, pos.y + padding), text_col, n.text.c_str());
 
             if (n.age >= n.lifetime) {
@@ -92,8 +104,6 @@ namespace ez {
         }
     }
 
-    // SetFont
-    // Add way to pushfont tabboxes and its contents 
     void SetFont(const std::string& name) {
         if (fonts.contains(name)) {
             currentFontName = name;
@@ -182,7 +192,26 @@ namespace ez {
             break;
         case ElementType::ToggleColorPicker:
         {
-            ImGui::Checkbox(e.label.c_str(), e.boolVal);
+            #ifdef USE_EZ_WIDGETS
+            switch (e.styleValue)
+            {
+            case CheckboxStyle::ToggleSwitch:
+                ezWidgets::ToggleSwitch(e.label.c_str(), e.boolValue);
+                break;
+            case CheckboxStyle::Anim1:
+                ezWidgets::CheckboxAnim1(e.label.c_str(), e.boolValue);
+                break;
+            case CheckboxStyle::Anim2:
+                ezWidgets::CheckboxAnim2(e.label.c_str(), e.boolValue);
+                break;
+            case CheckboxStyle::ImGuiDefault:
+            default:
+                ImGui::Checkbox(e.label.c_str(), e.boolValue);
+                break;
+            }
+            #else
+                ImGui::Checkbox(e.label.c_str(), e.boolVal);
+            #endif
 
             float fullWidth = ImGui::GetContentRegionAvail().x;
             float colorPickerWidth = 25.0f; // approximate width of color picker (can tweak as needed)
@@ -271,7 +300,7 @@ namespace ez {
         window->DrawList->AddLine(ImVec2(startX, separatorY), ImVec2(endX, separatorY), color, thickness);
 
         // Optional
-        ImGui::Dummy(ImVec2(0.0f, thickness));
+        ImGui::Dummy(ImVec2(0.5f, thickness));
     }
 
     std::shared_ptr<Tab> Window::AddTab(const char* name) {
@@ -308,6 +337,20 @@ namespace ez {
 
         void TabboxTab::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style) {
             elements.emplace_back(label, current_item, items, height_in_items, style);
+        }
+
+        void TabboxTab::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
+            elements.emplace_back(label, current_item, items, height_in_items, ez::ComboBoxStyle::ImGuiDefault);
+        }
+
+        void TabboxTab::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style)
+        {
+            elements.emplace_back(label, value, color, style);
+        }
+
+        void TabboxTab::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color)
+        {
+            elements.emplace_back(label, value, color, CheckboxStyle::ImGuiDefault);
         }
 
     #endif
@@ -366,6 +409,21 @@ namespace ez {
         void Tabbox::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style) {
             elements.emplace_back(label, current_item, items, height_in_items, style);
         }
+
+        void Tabbox::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
+            elements.emplace_back(label, current_item, items, height_in_items, ez::ComboBoxStyle::ImGuiDefault);
+        }
+
+        void Tabbox::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style)
+        {
+            elements.emplace_back(label, value, color, style);
+        }
+
+        void Tabbox::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color)
+        {
+            elements.emplace_back(label, value, color, CheckboxStyle::ImGuiDefault);
+        }
+
     #else
         void Tabbox::AddCheckbox(const char* label, bool* value) {
             elements.emplace_back(label, value);
@@ -530,13 +588,13 @@ namespace ez {
                             switch (e.type)
                             {
                             case ElementType::ComboBox:
-                                tabboxHeight += itemHeight * (e.comboData.heightInItems + 1) + 65.f; // more generous for dropdown
+                                tabboxHeight += itemHeight * (e.comboData.heightInItems + 1) + 45.f; // more generous for dropdown
                                 break;
                             case ElementType::ColorPicker:
                                 tabboxHeight += itemHeight * 1.15f; // color pickers are taller
                                 break;
                             case ElementType::Toggle:
-                                tabboxHeight += (itemHeight * 1.25f) - (elementCount);
+                                tabboxHeight += (itemHeight * 1.45) - (elementCount);
                                 break;
                             case ElementType::MultiComboBox:
                                 tabboxHeight += (itemHeight * 1.35);
@@ -552,6 +610,14 @@ namespace ez {
 
                         ImGui::PushStyleColor(ImGuiCol_ChildBg, ez::tbxBackgroundColor);
                         ImGui::PushStyleColor(ImGuiCol_Border, ez::tbxBorderColor);
+                        ImGui::PushStyleColor(ImGuiCol_FrameBg, ez::frameBg);
+                        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ez::frameBgActive);
+                        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ez::frameBgHovered);
+                        // ImGuiCol_CheckMark ImGuiCol_SliderGrab ImGuiCol_SliderGrabActive
+                        ImGui::PushStyleColor(ImGuiCol_CheckMark, ez::accentColor);
+                        ImGui::PushStyleColor(ImGuiCol_SliderGrab, ez::accentColor);
+                        ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ez::accentColor);
+                        ImGui::PushStyleColor(ImGuiCol_Button, ez::buttonColor);
                         ImGui::BeginChild(tabbox->name.c_str(), ImVec2(0, tabboxHeight), true);
                         ImGui::Text("%s", tabbox->name.c_str());
 
@@ -560,10 +626,17 @@ namespace ez {
                         float buttonWidth = ImGui::GetContentRegionAvail().x / std::max(1, (int)tabbox->tabs.size());
                         for (int i = 0; i < tabbox->tabs.size(); ++i) {
                             ImGui::PushID(i);
+
+                            ImVec4 normalColor = ImVec4(0.2f, 0.2f, 0.2f, 1);
+                            ImVec4 activeColor = ImVec4(0.35f, 0.35f, 0.4f, 1);
+                            ImGui::PushStyleColor(ImGuiCol_Button, currentIndex == i ? activeColor : normalColor);
+
                             bool isSelected = (currentIndex == i);
                             if (ImGui::Button((tabbox->tabs[i]->name + "##" + tabbox->name).c_str(), ImVec2(buttonWidth - 4.0f, 0))) {
                                 currentIndex = i;
                             }
+
+                            ImGui::PopStyleColor();
 
                             if (i < tabbox->tabs.size() - 1)
                                 ImGui::SameLine(0.0f, 4.0f);
@@ -589,7 +662,7 @@ namespace ez {
                         ImGui::PopStyleColor(2);
 
                         ImGui::EndChild();
-                        ImGui::PopStyleColor(2);
+                        ImGui::PopStyleColor(9);
                     }
                 }
                 ImGui::NextColumn();

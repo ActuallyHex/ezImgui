@@ -60,7 +60,12 @@ namespace ez {
     inline std::string currentFontName = "default";
     inline ImVec4 tbxBackgroundColor = ImVec4(0.102f, 0.103f, 0.103f, 1.00f);
     inline ImVec4 winBackgroundColor = ImVec4(0.069f, 0.069f, 0.069f, 1.00f);
-    inline ImVec4 tbxBorderColor = ImVec4(0.275f, 0.275f, 0.275f, 1.00f);
+    inline ImVec4 tbxBorderColor = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
+    inline ImVec4 frameBg = ImVec4(0.16f, 0.29f, 0.48f, 0.54f);
+    inline ImVec4 frameBgHovered = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
+    inline ImVec4 frameBgActive = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
+    inline ImVec4 accentColor = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    inline ImVec4 buttonColor = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
 
     inline TabMode g_TabMode = TabMode::ImGuiTabs;
 
@@ -99,7 +104,9 @@ namespace ez {
             UIElement(const std::string& lbl, bool* val, CheckboxStyle style = CheckboxStyle::ImGuiDefault)
                 : type(ElementType::Toggle), label(lbl), boolValue(val), styleValue(style) {
             }
-
+            UIElement(const std::string& lbl, bool* val, ImVec4* clr, CheckboxStyle style = CheckboxStyle::ImGuiDefault)
+                : type(ElementType::ToggleColorPicker), label(lbl), boolVal(val), clrVal(clr), styleValue(style) {
+            }
         #else
         UIElement(const std::string& lbl, bool* val)
             : type(ElementType::Toggle), label(lbl), boolValue(val) {
@@ -171,6 +178,7 @@ namespace ez {
         void AddCheckbox(const char* label, bool* value);
         void AddCheckbox(const char* label, bool* value, CheckboxStyle style);
         void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color);
+        void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style);
         void AddSlider(const char* label, float* value, float min, float max);
         void AddSlider(const char* label, int* value, int min, int max);
         void AddColorPicker(const char* label, ImVec4* color);
@@ -178,11 +186,9 @@ namespace ez {
         void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
         void AddButton(const char* label, std::function<void()> onClick = nullptr);
 
-        #ifdef USE_EZ_WIDGETS
-            void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);
-        #else
-            void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
-        #endif
+        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items);
+        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style);
+
 
         void Render();
     };
@@ -198,6 +204,7 @@ namespace ez {
         void AddCheckbox(const char* label, bool* value);
         void AddCheckbox(const char* label, bool* value, CheckboxStyle style);
         void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color);
+        void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style);
         void AddSlider(const char* label, float* value, float min, float max);
         void AddSlider(const char* label, int* value, int min, int max);
         void AddColorPicker(const char* label, ImVec4* color);
@@ -205,11 +212,8 @@ namespace ez {
         void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
         void AddButton(const char* label, std::function<void()> onClick = nullptr);
 
-        #ifdef USE_EZ_WIDGETS
-            void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1, ComboBoxStyle style = ComboBoxStyle::ImGuiDefault);
-        #else        
-            void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
-        #endif
+        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
+        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style);
 
         void RenderExtras();
     };
