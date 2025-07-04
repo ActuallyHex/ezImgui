@@ -10,9 +10,7 @@
 //    vector<T> might improve performance?
 //    as it is right now the wrapper isnt very performance or thread safe
 // 2. (maybe) Add way to pushfont tabboxes and its contents
-// 3. Test ezWidgets as I havent had it enabled it a bit
-// 4. Better theming options
-// 5. More drawlist features (animations, styles, etc.)
+// 3. More drawlist features (animations, styles, etc.)
 
 namespace ez {
 
@@ -28,9 +26,6 @@ namespace ez {
         const float padding = 10.0f;
         const float line_height = 20.0f;
         const float box_rounding = 0.0f;
-        const ImU32 bg_col_base = IM_COL32(30, 30, 30, 255);
-        const ImU32 border_col_base = IM_COL32(120, 120, 120, 255);
-        const ImU32 text_col_base = IM_COL32(255, 255, 255, 255);
 
         int index = 0;
         for (int i = 0; i < g_Notifications.size(); ) {
@@ -59,12 +54,15 @@ namespace ez {
             ImVec2 rect_outline_min = ImVec2(pos.x - 1.4f, pos.y - 1.4f);
             ImVec2 rect_outline_max = ImVec2(pos.x + box_width + 1.4f, pos.y + box_height + 1.4f);
 
+            ImU32 bg_border_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.0f, 0.0f, 0.0f, n.alpha));
             ImU32 bg_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.07f, 0.07f, 0.07f, n.alpha));
-            ImU32 border_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.17f, 0.17f, 0.17f, n.alpha));
+            ImU32 border_col = ImGui::ColorConvertFloat4ToU32(ImVec4(ez::accentColor.x, ez::accentColor.y, ez::accentColor.z, n.alpha));
             ImU32 text_col = ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, n.alpha));
 
             draw_list->AddRectFilled(rect_min, rect_max, bg_col, box_rounding);
+            draw_list->AddRect(ImVec2(rect_outline_min.x - 0.4f, rect_outline_min.y - 0.4f), ImVec2(rect_outline_max.x + 0.4f, rect_outline_max.y + 0.4f), bg_border_col, box_rounding);
             draw_list->AddRect(rect_outline_min, rect_outline_max, border_col, box_rounding);
+
             draw_list->AddText(ImVec2(pos.x + padding, pos.y + padding), text_col, n.text.c_str());
 
             if (n.age >= n.lifetime) {
@@ -227,7 +225,7 @@ namespace ez {
             ImGui::Text("%s", e.label.c_str());
             break;
         case ElementType::Button:
-            if (ImGui::Button(e.label.c_str()) && e.buttonCallback)
+            if (ImGui::Button(e.label.c_str(), ImVec2(-1, 26)) && e.buttonCallback)
                 e.buttonCallback();
             break;
         case ElementType::ComboBox:
@@ -284,7 +282,7 @@ namespace ez {
         }
     }
 
-    void ez::RenderFullWidthSeparator(float thickness, ImU32 color)
+    void ez::RenderFullWidthSeparator(float thickness, ImVec4 color)
     {
         ImGuiWindow* window = ImGui::GetCurrentWindow();
         if (window->SkipItems)
@@ -297,7 +295,7 @@ namespace ez {
         const float startX = window->Pos.x;
         const float endX = window->Pos.x + window->Size.x;
 
-        window->DrawList->AddLine(ImVec2(startX, separatorY), ImVec2(endX, separatorY), color, thickness);
+        window->DrawList->AddLine(ImVec2(startX, separatorY), ImVec2(endX, separatorY), ImColor(color), thickness);
 
         // Optional
         ImGui::Dummy(ImVec2(0.5f, thickness));
@@ -493,11 +491,8 @@ namespace ez {
         static int testBar = 0;
         ImVec2 contentSize;
 
-        //style.Colors[ImGuiCol_CheckMark] = accentColor;
-
         if (fonts.contains(currentFontName))
             ImGui::PushFont(fonts[currentFontName]);
-
 
         if (!tabNames.empty())
         {
@@ -538,14 +533,14 @@ namespace ez {
                 }
                 ImGui::EndChild();
 
-                RenderFullWidthSeparator();
+                RenderFullWidthSeparator(1.0f, contentSeperatorColor);
             }
 
 
         }
 
         currentTab = testBar;
-
+        ImGui::PushStyleColor(ImGuiCol_Border, ez::contentFrameBorderBg);
         ImGui::BeginChild("##MainFrame", contentSize, true);
         {
             auto& tab = tabs[currentTab];
@@ -568,7 +563,7 @@ namespace ez {
                             elementCount = static_cast<int>(tabbox->elements.size());
                         }
 
-                        float itemHeight = ImGui::GetFrameHeightWithSpacing(); // standard height per item
+                        float itemHeight = ImGui::GetFrameHeightWithSpacing();      // standard height per item
                         float headerHeight = ImGui::GetTextLineHeightWithSpacing(); // for the tabbox label
 
                         float separatorSpacing = 2 * ImGui::GetStyle().ItemSpacing.y; // 2 separators (top + below tabs)
@@ -587,17 +582,53 @@ namespace ez {
                         {
                             switch (e.type)
                             {
-                            case ElementType::ComboBox:
-                                tabboxHeight += itemHeight * (e.comboData.heightInItems + 1) + 45.f; // more generous for dropdown
-                                break;
-                            case ElementType::ColorPicker:
-                                tabboxHeight += itemHeight * 1.15f; // color pickers are taller
-                                break;
-                            case ElementType::Toggle:
-                                tabboxHeight += (itemHeight * 1.45) - (elementCount);
-                                break;
                             case ElementType::MultiComboBox:
-                                tabboxHeight += (itemHeight * 1.35);
+                            case ElementType::ComboBox:
+                            {
+                                float comboHeight = 1.45;
+                                float finalMod = 0.0f;
+
+                                if (elementCount > 1)
+                                {
+                                    finalMod = (elementCount + 1);
+                                    finalMod += (comboHeight / elementCount) + 1;
+                                }
+
+                                tabboxHeight += (itemHeight * comboHeight) - finalMod;
+                                break;
+                            }
+                            case ElementType::ColorPicker:
+                            {
+                                float clrHeight = 1.42;
+                                float finalMod = 0.0f;
+
+                                if (elementCount > 1)
+                                {
+                                    finalMod = (elementCount + 1);
+                                    finalMod += (clrHeight / elementCount) + 1;
+                                }
+
+                                tabboxHeight += (itemHeight * clrHeight) - finalMod;
+                                break;
+                            }
+                            case ElementType::Toggle:
+                            {
+                                float toggleHeight = 1.35;
+                                float finalMod = 0.0f;
+
+                                if (elementCount > 1)
+                                {
+                                    finalMod = (elementCount + 1);
+                                    finalMod += (toggleHeight / elementCount) + 1;               // Is this the best way to get total element height? No absolutely not... but it works.
+                                }
+
+                                tabboxHeight += (itemHeight * toggleHeight) - finalMod;
+
+                                break;
+                            }
+                            case ElementType::SliderInt:
+                            case ElementType::SliderFloat:
+                                tabboxHeight += itemHeight * 1.20f;
                                 break;
                             default:
                                 tabboxHeight += itemHeight;
@@ -608,20 +639,24 @@ namespace ez {
                         if (elementCount == 0)
                             tabboxHeight += itemHeight * 0.79f;
 
+                        // [Tabbox Content Colors]
                         ImGui::PushStyleColor(ImGuiCol_ChildBg, ez::tbxBackgroundColor);
                         ImGui::PushStyleColor(ImGuiCol_Border, ez::tbxBorderColor);
                         ImGui::PushStyleColor(ImGuiCol_FrameBg, ez::frameBg);
                         ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ez::frameBgActive);
                         ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ez::frameBgHovered);
-                        // ImGuiCol_CheckMark ImGuiCol_SliderGrab ImGuiCol_SliderGrabActive
                         ImGui::PushStyleColor(ImGuiCol_CheckMark, ez::accentColor);
                         ImGui::PushStyleColor(ImGuiCol_SliderGrab, ez::accentColor);
                         ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ez::accentColor);
                         ImGui::PushStyleColor(ImGuiCol_Button, ez::buttonColor);
+                        
+                        // [Tabbox Content Styles]
+                        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, ez::frameRounding);
+                        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, ez::tabboxRounding);
                         ImGui::BeginChild(tabbox->name.c_str(), ImVec2(0, tabboxHeight), true);
                         ImGui::Text("%s", tabbox->name.c_str());
 
-                        RenderFullWidthSeparator();
+                        RenderFullWidthSeparator(1.0f, tbxBorderColor);
 
                         float buttonWidth = ImGui::GetContentRegionAvail().x / std::max(1, (int)tabbox->tabs.size());
                         for (int i = 0; i < tabbox->tabs.size(); ++i) {
@@ -645,7 +680,7 @@ namespace ez {
                         }
 
                         if (!tabbox->tabs.empty())
-                            RenderFullWidthSeparator();
+                            RenderFullWidthSeparator(1.0f, tbxBorderColor);
 
                         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.f, 0.f, 0.f, 0.f));
                         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.f, 0.f, 0.f, 0.f));
@@ -662,6 +697,7 @@ namespace ez {
                         ImGui::PopStyleColor(2);
 
                         ImGui::EndChild();
+                        ImGui::PopStyleVar(2);
                         ImGui::PopStyleColor(9);
                     }
                 }
@@ -669,6 +705,7 @@ namespace ez {
             }
         }
         ImGui::EndChild();
+        ImGui::PopStyleColor(1);
 
         if (fonts.contains(currentFontName))
             ImGui::PopFont();

@@ -58,6 +58,7 @@ namespace ez {
     inline std::unordered_map<std::string, ImFont*> fonts;
     inline std::vector<Notification> g_Notifications;
     inline std::string currentFontName = "default";
+
     inline ImVec4 tbxBackgroundColor = ImVec4(0.102f, 0.103f, 0.103f, 1.00f);
     inline ImVec4 winBackgroundColor = ImVec4(0.069f, 0.069f, 0.069f, 1.00f);
     inline ImVec4 tbxBorderColor = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
@@ -66,6 +67,11 @@ namespace ez {
     inline ImVec4 frameBgActive = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
     inline ImVec4 accentColor = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
     inline ImVec4 buttonColor = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
+    inline ImVec4 contentSeperatorColor = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
+    inline ImVec4 contentFrameBorderBg = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
+    inline int tabboxRounding = 0;
+    inline int frameRounding = 0;
+
 
     inline TabMode g_TabMode = TabMode::ImGuiTabs;
 
@@ -76,7 +82,7 @@ namespace ez {
     void LoadFont(const std::string& name, const char* path, float size);
     void LoadFontFromMemory(const std::string& name, void* data, int size_bytes, float size_pixels);
     void SetFont(const std::string& name);
-    void RenderFullWidthSeparator(float thickness = 1.0f, ImU32 color = 0xFF444444);
+    void RenderFullWidthSeparator(float thickness, ImVec4 color);
     bool ImGuiMultiComboBox(const char* label, std::unordered_map<int, bool>* data, std::vector<const char*> items);
     void PushNotification(const std::string& text, float duration = 3.0f);
     void RenderNotifications();
@@ -86,8 +92,9 @@ namespace ez {
         CheckboxStyle styleValue;
         ComboBoxStyle comboStyle;
         std::string label;
-        std::vector<std::string> comboItemsStorage;
-        std::shared_ptr<std::unordered_map<int, bool>> multiComboData; // for MultiComboBox
+        std::vector<std::string> comboItemStorage;                  // string copies
+        std::vector<const char*> comboItemPointers;                 // char* pointers. Changed because combo box data was being overwritten when multiple combo boxes existed in the same tabbox.
+        std::shared_ptr<std::unordered_map<int, bool>> multiComboData;
         std::vector<const char*> multiComboRawItems;
         std::function<void()> buttonCallback;
 
@@ -119,29 +126,35 @@ namespace ez {
 
         UIElement(const std::string& lbl, int* curval, std::initializer_list<const char*> itemsInitList, int height)
             : type(ElementType::ComboBox), label(lbl) {
-            comboItemsStorage.assign(itemsInitList.begin(), itemsInitList.end());
             comboData.currentItem = curval;
-            comboData.itemsCount = static_cast<int>(comboItemsStorage.size());
             comboData.heightInItems = height;
 
-            static std::vector<const char*> tempPointers;
-            tempPointers.clear();
-            for (const auto& s : comboItemsStorage)
-                tempPointers.push_back(s.c_str());
-            comboData.items = tempPointers.data();
+            comboItemStorage.clear();
+            for (const auto& s : itemsInitList)
+                comboItemStorage.emplace_back(s);
+
+            comboItemPointers.clear();
+            for (const auto& str : comboItemStorage)
+                comboItemPointers.push_back(str.c_str());
+
+            comboData.items = comboItemPointers.data();
+            comboData.itemsCount = static_cast<int>(comboItemPointers.size());
         }
         UIElement(const std::string& lbl, int* curval, std::initializer_list<const char*> itemsInitList, int height, ComboBoxStyle style)
             : type(ElementType::ComboBox), label(lbl), comboStyle(style) {
-            comboItemsStorage.assign(itemsInitList.begin(), itemsInitList.end());
             comboData.currentItem = curval;
-            comboData.itemsCount = static_cast<int>(comboItemsStorage.size());
             comboData.heightInItems = height;
 
-            static std::vector<const char*> tempPointers;
-            tempPointers.clear();
-            for (const auto& s : comboItemsStorage)
-                tempPointers.push_back(s.c_str());
-            comboData.items = tempPointers.data();
+            comboItemStorage.clear();
+            for (const auto& s : itemsInitList)
+                comboItemStorage.emplace_back(s);
+
+            comboItemPointers.clear();
+            for (const auto& str : comboItemStorage)
+                comboItemPointers.push_back(str.c_str());
+
+            comboData.items = comboItemPointers.data();
+            comboData.itemsCount = static_cast<int>(comboItemPointers.size());
         }
         UIElement(const std::string& lbl, float* val, float mi, float ma)
             : type(ElementType::SliderFloat), label(lbl) {
@@ -164,9 +177,9 @@ namespace ez {
 
         UIElement(const std::string& lbl, std::initializer_list<const char*> itemsList, std::shared_ptr<std::unordered_map<int, bool>> data)
             : type(ElementType::MultiComboBox), label(lbl), multiComboData(std::move(data)) {
-            comboItemsStorage.assign(itemsList.begin(), itemsList.end());
-            multiComboRawItems.reserve(comboItemsStorage.size());
-            for (const auto& s : comboItemsStorage)
+            comboItemStorage.assign(itemsList.begin(), itemsList.end());
+            multiComboRawItems.reserve(comboItemStorage.size());
+            for (const auto& s : comboItemStorage)
                 multiComboRawItems.push_back(s.c_str());
         }
     };
@@ -176,9 +189,9 @@ namespace ez {
         std::vector<UIElement> elements;
 
         void AddCheckbox(const char* label, bool* value);
-        void AddCheckbox(const char* label, bool* value, CheckboxStyle style);
+        void AddCheckbox(const char* label, bool* value, CheckboxStyle style);     // Only used in EzWidgets
         void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color);
-        void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style);
+        void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style);     // Only used in EzWidgets
         void AddSlider(const char* label, float* value, float min, float max);
         void AddSlider(const char* label, int* value, int min, int max);
         void AddColorPicker(const char* label, ImVec4* color);
@@ -187,8 +200,7 @@ namespace ez {
         void AddButton(const char* label, std::function<void()> onClick = nullptr);
 
         void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items);
-        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style);
-
+        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style);     // Only used in EzWidgets
 
         void Render();
     };
@@ -202,9 +214,9 @@ namespace ez {
 
         std::shared_ptr<TabboxTab> AddTab(const char* name);
         void AddCheckbox(const char* label, bool* value);
-        void AddCheckbox(const char* label, bool* value, CheckboxStyle style);
+        void AddCheckbox(const char* label, bool* value, CheckboxStyle style);     // Only used in EzWidgets
         void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color);
-        void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style);
+        void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style);     // Only used in EzWidgets
         void AddSlider(const char* label, float* value, float min, float max);
         void AddSlider(const char* label, int* value, int min, int max);
         void AddColorPicker(const char* label, ImVec4* color);
@@ -213,7 +225,7 @@ namespace ez {
         void AddButton(const char* label, std::function<void()> onClick = nullptr);
 
         void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
-        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style);
+        void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style);     // Only used in EzWidgets
 
         void RenderExtras();
     };

@@ -168,6 +168,8 @@ int main(int, char**)
 
         tabbox1->AddCheckbox("Toggle 1", &myToggle);
         tabbox1->AddCheckbox("Toggle 2", &myToggle2);
+        tabbox1->AddCheckbox("Toggle 3", &myToggle3);
+        tabbox1->AddCheckbox("Toggle 4", &myToggle4);
         //tabbox1->AddCheckboxColorPicker("Toggle 3", &myToggle3, &myColor, ez::CheckboxStyle::Anim2);
         //tabbox1->AddCheckbox("Toggle 4", &myToggle4, ez::CheckboxStyle::ToggleSwitch);
         //tabbox1->AddSlider("Slider Int", &myIntSlider, 0, 100);
@@ -184,9 +186,12 @@ int main(int, char**)
         //tabbox2->AddComboBox("Combo 1", &myChoice, { "one", "two", "three" }, -1);
         //tabbox2->AddMultiComboBox("Mult Combo", { "Read", "Write", "Execute", "Delete" }, perms);
         tabbox2->AddComboBox("Combo 22", &myChoice2, { "Choice 1", "Choice 2", "Choice 3" }, -1);
+        tabbox2->AddMultiComboBox("Mult Combo", { "Read", "Write", "Execute", "Delete" }, perms);
 
         auto settingsColorTab = settingsTab->AddTabbox("Menu Colors");
         settingsColorTab->AddColorPicker("Tabbox Border Color", &ez::tbxBorderColor);
+        settingsColorTab->AddColorPicker("Content Border Color", &ez::contentFrameBorderBg);
+        settingsColorTab->AddColorPicker("Content Seperator Color", &ez::contentSeperatorColor);
         settingsColorTab->AddColorPicker("Tabbox Background Color", &ez::tbxBackgroundColor);
         settingsColorTab->AddColorPicker("Window Background Color", &ez::winBackgroundColor);
         settingsColorTab->AddColorPicker("Frame Background Color", &ez::frameBg);
@@ -194,6 +199,10 @@ int main(int, char**)
         settingsColorTab->AddColorPicker("Frame Background Hovered Color", &ez::frameBgHovered);
         settingsColorTab->AddColorPicker("Accent Color", &ez::accentColor);
         settingsColorTab->AddColorPicker("Button Color", &ez::buttonColor);
+
+        auto settingsStyleTab = settingsTab->AddTabbox("Menu Style Vars", ez::TabboxSide::Right);
+        settingsStyleTab->AddSlider("Tabbox Rounding", &ez::tabboxRounding, 0, 10);
+        settingsStyleTab->AddSlider("Frame Rounding", &ez::frameRounding, 0, 10);
 
         ez::RenderNotifications();
         myWindow->Render();
