@@ -169,10 +169,9 @@ int main(int, char**)
         tabbox1->AddCheckbox("Toggle 1", &myToggle);
         tabbox1->AddCheckbox("Toggle 2", &myToggle2);
         tabbox1->AddCheckbox("Toggle 3", &myToggle3);
-        tabbox1->AddCheckbox("Toggle 4", &myToggle4);
-        //tabbox1->AddCheckboxColorPicker("Toggle 3", &myToggle3, &myColor, ez::CheckboxStyle::Anim2);
-        //tabbox1->AddCheckbox("Toggle 4", &myToggle4, ez::CheckboxStyle::ToggleSwitch);
-        //tabbox1->AddSlider("Slider Int", &myIntSlider, 0, 100);
+        tabbox1->AddCheckboxColorPicker("Toggle 4", &myToggle4, &myColor);
+        tabbox1->AddSlider("Slider Int", &myIntSlider, 0, 100);
+        tabbox1->AddSlider("Slider Float", &mySlider, 0.f, 100.f);
 
         auto tabbox2 = tab1->AddTabbox("Tab header 2", ez::TabboxSide::Right);
 
@@ -182,9 +181,6 @@ int main(int, char**)
 
             });
         tabbox2->AddComboBox("Combo 1", &myChoice, { "one", "two", "three" }, -1);
-        //tabbox2->AddComboBox("Combo 1", &myChoice, { "One", "Two", "Three" }, -1);
-        //tabbox2->AddComboBox("Combo 1", &myChoice, { "one", "two", "three" }, -1);
-        //tabbox2->AddMultiComboBox("Mult Combo", { "Read", "Write", "Execute", "Delete" }, perms);
         tabbox2->AddComboBox("Combo 22", &myChoice2, { "Choice 1", "Choice 2", "Choice 3" }, -1);
         tabbox2->AddMultiComboBox("Mult Combo", { "Read", "Write", "Execute", "Delete" }, perms);
 

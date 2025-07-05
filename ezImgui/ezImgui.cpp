@@ -611,6 +611,7 @@ namespace ez {
                                 tabboxHeight += (itemHeight * clrHeight) - finalMod;
                                 break;
                             }
+                            case ElementType::ToggleColorPicker:
                             case ElementType::Toggle:
                             {
                                 float toggleHeight = 1.35;
@@ -626,6 +627,9 @@ namespace ez {
 
                                 break;
                             }
+                            case ElementType::Button:
+                                tabboxHeight += itemHeight * 1.35f;
+                                break;
                             case ElementType::SliderInt:
                             case ElementType::SliderFloat:
                                 tabboxHeight += itemHeight * 1.20f;
