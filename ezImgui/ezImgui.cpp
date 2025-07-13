@@ -180,10 +180,39 @@ namespace ez {
             break;
         }
         case ElementType::SliderFloat:
+            #ifdef USE_EZ_WIDGETS
+            switch (e.sliderStyle)
+            {
+            case SliderStyle::Style1:
+                ezWidgets::SliderStyle1(e.label.c_str(), e.valueFloat, e.minFloat, e.maxFloat, "%d", 0);
+                break;
+            case SliderStyle::ImGuiDefault:
+            default:
+                ImGui::SliderFloat(e.label.c_str(), e.valueFloat, e.minFloat, e.maxFloat);
+                break;
+            }
+            #else
             ImGui::SliderFloat(e.label.c_str(), e.valueFloat, e.minFloat, e.maxFloat);
+            #endif
+
             break;
         case ElementType::SliderInt:
+            #ifdef USE_EZ_WIDGETS 
+            switch (e.sliderStyle)
+            {
+            case SliderStyle::Style1:
+                ezWidgets::SliderStyle1(e.label.c_str(), e.valueInt, e.minInt, e.maxInt, "%d", 0);
+                ImGui::Dummy(ImVec2(0.0f, 4.f));
+                break;
+            case SliderStyle::ImGuiDefault:
+            default:
+                ImGui::SliderInt(e.label.c_str(), e.valueInt, e.minInt, e.maxInt);
+                break;
+            }
+            #else
             ImGui::SliderInt(e.label.c_str(), e.valueInt, e.minInt, e.maxInt);
+            #endif
+            
             break;
         case ElementType::ColorPicker:
             ImGui::ColorEdit4(e.label.c_str(), (float*)e.colorValue, ImGuiColorEditFlags_NoInputs);
@@ -225,9 +254,37 @@ namespace ez {
             ImGui::Text("%s", e.label.c_str());
             break;
         case ElementType::Button:
-            if (ImGui::Button(e.label.c_str(), ImVec2(-1, 26)) && e.buttonCallback)
+
+            #ifdef USE_EZ_WIDGETS
+            switch (e.buttonStyle)
+            {
+            case ButtonStyle::Style1:
+                ezWidgets::IconButton1(e.label.c_str(), ImVec2(-FLT_MIN, 0.0f), false);
+                break;
+            case ButtonStyle::ImGuiDefault:
+            default:
+                if (ImGui::Button(e.label.c_str(), ImVec2(-FLT_MIN, 0.0f)) && e.buttonCallback)
+                    e.buttonCallback();
+                break;
+            }
+
+            #else
+            if (ImGui::Button(e.label.c_str(), ImVec2(-FLT_MIN, 0.0f)) && e.buttonCallback)
+                e.buttonCallback();
+            #endif
+
+            break;
+        case ElementType::GradientButton:
+        {
+            #ifdef USE_EZ_WIDGETS
+            if (ezWidgets::ColoredButtonV1(e.label.c_str(), ImVec2(-FLT_MIN, 0.0f), e.text_color, e.bg_color_1, e.bg_color_2) && e.buttonCallback)
                 e.buttonCallback();
             break;
+
+            #else
+            break;
+            #endif
+        }
         case ElementType::ComboBox:
             #ifdef USE_EZ_WIDGETS
 
@@ -351,6 +408,25 @@ namespace ez {
             elements.emplace_back(label, value, color, CheckboxStyle::ImGuiDefault);
         }
 
+        void TabboxTab::AddGradientButton(const char* label, ImU32 textClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> onClick)
+        {
+            elements.emplace_back(label, UIElement::ButtonTag{}, textClr, bgClr1, bgClr2, onClick);
+        }
+
+        void TabboxTab::AddSlider(const char* label, float* value, float min, float max, SliderStyle style)
+        {
+            elements.emplace_back(label, value, min, max, style);
+        }
+
+        void TabboxTab::AddSlider(const char* label, int* value, int min, int max, SliderStyle style)
+        {
+            elements.emplace_back(label, value, min, max, style);
+        }
+
+        void TabboxTab::AddButton(const char* label, std::function<void()> onClick, ButtonStyle style)
+        {
+            elements.emplace_back(label, UIElement::ButtonTag{}, onClick, style);
+        }
     #endif
 
     #ifndef USE_EZ_WIDGETS
@@ -366,17 +442,20 @@ namespace ez {
         void TabboxTab::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
             elements.emplace_back(label, current_item, items, height_in_items);
         }
+
+        void TabboxTab::AddSlider(const char* label, float* value, float min, float max) {
+            elements.emplace_back(label, value, min, max);
+        }
+
+        void TabboxTab::AddSlider(const char* label, int* value, int min, int max)
+        {
+            elements.emplace_back(label, value, min, max);
+        }
+
+        void TabboxTab::AddButton(const char* label, std::function<void()> onClick) {
+            elements.emplace_back(label, UIElement::ButtonTag{}, onClick);
+        }
     #endif
-
-
-    void TabboxTab::AddSlider(const char* label, float* value, float min, float max) {
-        elements.emplace_back(label, value, min, max);
-    }
-
-    void TabboxTab::AddSlider(const char* label, int* value, int min, int max)
-    {
-        elements.emplace_back(label, value, min, max);
-    }
 
     void TabboxTab::AddColorPicker(const char* label, ImVec4* color) {
         elements.emplace_back(label, color);
@@ -384,10 +463,6 @@ namespace ez {
 
     void TabboxTab::AddLabel(const char* label) {
         elements.emplace_back(label);
-    }
-
-    void TabboxTab::AddButton(const char* label, std::function<void()> onClick) {
-        elements.emplace_back(label, UIElement::ButtonTag{}, onClick);
     }
 
     void TabboxTab::AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data) {
@@ -422,6 +497,25 @@ namespace ez {
             elements.emplace_back(label, value, color, CheckboxStyle::ImGuiDefault);
         }
 
+        void Tabbox::AddGradientButton(const char* label, ImU32 textClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> onClick)
+        {
+            elements.emplace_back(label, UIElement::ButtonTag{}, textClr, bgClr1, bgClr2, onClick);
+        }
+
+        void Tabbox::AddSlider(const char* label, float* value, float min, float max, SliderStyle style)
+        {
+            elements.emplace_back(label, value, min, max, style);
+        }
+
+        void Tabbox::AddSlider(const char* label, int* value, int min, int max, SliderStyle style)
+        {
+            elements.emplace_back(label, value, min, max, style);
+        }
+
+        void Tabbox::AddButton(const char* label, std::function<void()> onClick, ButtonStyle style)
+        {
+            elements.emplace_back(label, UIElement::ButtonTag{}, onClick, style);
+        }
     #else
         void Tabbox::AddCheckbox(const char* label, bool* value) {
             elements.emplace_back(label, value);
@@ -435,32 +529,32 @@ namespace ez {
         void Tabbox::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
             elements.emplace_back(label, current_item, items, height_in_items);
         }
-    #endif
 
-    void Tabbox::AddSlider(const char* label, float* value, float min, float max) {
-        elements.emplace_back(label, value, min, max);
-    }
+        void Tabbox::AddSlider(const char* label, float* value, float min, float max) 
+        {
+            elements.emplace_back(label, value, min, max);
+        }
+
+        void Tabbox::AddSlider(const char* label, int* value, int min, int max)
+        {
+            elements.emplace_back(label, value, min, max);
+        }
+
+        void Tabbox::AddButton(const char* label, std::function<void()> onClick) {
+            elements.emplace_back(label, UIElement::ButtonTag{}, onClick);
+        }
+    #endif
 
     void Tabbox::AddColorPicker(const char* label, ImVec4* color) {
         elements.emplace_back(label, color);
-    }
-
-    void Tabbox::AddSlider(const char* label, int* value, int min, int max)
-    {
-        elements.emplace_back(label, value, min, max);
     }
 
     void Tabbox::AddLabel(const char* label) {
         elements.emplace_back(label);
     }
 
-
     void Tabbox::AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data) {
         elements.emplace_back(label, items, data);
-    }
-
-    void Tabbox::AddButton(const char* label, std::function<void()> onClick) {
-        elements.emplace_back(label, UIElement::ButtonTag{}, onClick);
     }
 
     void TabboxTab::Render() {
@@ -513,27 +607,47 @@ namespace ez {
             else if (tabMode == TabMode::ButtonTabs)
             {
                 float buttonHeight = 30.0f;
-                float spacing = ImGui::GetStyle().ItemSpacing.x;
-                float totalWidth = ImGui::GetContentRegionAvail().x;
-                contentSize = ImVec2(size.x - 15, size.y - 76);
 
-                ImGui::BeginChild("##ButtonTabBar", ImVec2(0, buttonHeight), false);              
-                for (size_t i = 0; i < tabNames.size(); i++) {
-                    if (i > 0) ImGui::SameLine();
+                if (tabButtonOrientation == TabButtonOrientation::HorizontalTop)
+                {
+                    ImGui::BeginChild("##ButtonTabBar", ImVec2(0, buttonHeight), false);
+                    for (size_t i = 0; i < tabNames.size(); i++) {
+                        if (i > 0) ImGui::SameLine();
 
-                    ImVec4 normalColor = ImVec4(0.2f, 0.2f, 0.2f, 1);
-                    ImVec4 activeColor = ImVec4(0.35f, 0.35f, 0.4f, 1);
-                    ImGui::PushStyleColor(ImGuiCol_Button, testBar == i ? activeColor : normalColor);
+                        ImVec4 normalColor = ImVec4(0.2f, 0.2f, 0.2f, 1);
+                        ImVec4 activeColor = ImVec4(0.35f, 0.35f, 0.4f, 1);
+                        ImGui::PushStyleColor(ImGuiCol_Button, testBar == i ? activeColor : normalColor);
 
-                    if (ImGui::Button(tabNames[i].c_str())) {
-                        testBar = static_cast<int>(i);
+                        if (ImGui::Button(tabNames[i].c_str())) {
+                            testBar = static_cast<int>(i);
+                        }
+
+                        ImGui::PopStyleColor();
                     }
+                    ImGui::EndChild();
 
-                    ImGui::PopStyleColor();
+                    RenderFullWidthSeparator(1.0f, contentSeperatorColor);
                 }
-                ImGui::EndChild();
+                else
+                {
+                    ImGui::BeginGroup();
+                    for (int i = 0; i < tabNames.size(); ++i) 
+                    {
+                        ImVec4 normalColor = ImVec4(0.2f, 0.2f, 0.2f, 1);
+                        ImVec4 activeColor = ImVec4(0.35f, 0.35f, 0.4f, 1);
+                        ImGui::PushStyleColor(ImGuiCol_Button, testBar == i ? activeColor : normalColor);
 
-                RenderFullWidthSeparator(1.0f, contentSeperatorColor);
+                        if (ImGui::Button(tabNames[i].c_str(), ImVec2(55.f, 0.0f))) {
+                            testBar = static_cast<int>(i);
+                        }
+
+                        ImGui::PopStyleColor();
+                    }
+                    ImGui::EndGroup();
+
+                    ImGui::SameLine();
+                }
+
             }
 
 
@@ -585,7 +699,7 @@ namespace ez {
                             case ElementType::MultiComboBox:
                             case ElementType::ComboBox:
                             {
-                                float comboHeight = 1.45;
+                                float comboHeight = 1.35;
                                 float finalMod = 0.0f;
 
                                 if (elementCount > 1)
@@ -628,12 +742,17 @@ namespace ez {
                                 break;
                             }
                             case ElementType::Button:
-                                tabboxHeight += itemHeight * 1.35f;
+                                tabboxHeight += itemHeight * 1.20f;
                                 break;
                             case ElementType::SliderInt:
                             case ElementType::SliderFloat:
-                                tabboxHeight += itemHeight * 1.20f;
-                                break;
+                            {
+                                if(e.sliderStyle == ez::SliderStyle::Style1)
+                                    tabboxHeight += itemHeight * 1.90f;
+                                else
+                                    tabboxHeight += itemHeight * 0.20f;
+                            }
+
                             default:
                                 tabboxHeight += itemHeight;
                                 break;
@@ -669,6 +788,7 @@ namespace ez {
                             ImVec4 normalColor = ImVec4(0.2f, 0.2f, 0.2f, 1);
                             ImVec4 activeColor = ImVec4(0.35f, 0.35f, 0.4f, 1);
                             ImGui::PushStyleColor(ImGuiCol_Button, currentIndex == i ? activeColor : normalColor);
+                           
 
                             bool isSelected = (currentIndex == i);
                             if (ImGui::Button((tabbox->tabs[i]->name + "##" + tabbox->name).c_str(), ImVec2(buttonWidth - 4.0f, 0))) {

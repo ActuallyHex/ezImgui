@@ -24,6 +24,17 @@ namespace ez {
         Style2
     };
 
+    enum class SliderStyle {
+        ImGuiDefault,
+        Style1,
+        Style2
+    };
+
+    enum class ButtonStyle {
+        ImGuiDefault,
+        Style1
+    };
+
     enum class TabboxSide {
         Left,
         Right
@@ -39,12 +50,18 @@ namespace ez {
         MultiComboBox,
         ToggleColorPicker,
         LabelColorPicker,
-        Button
+        Button,
+        GradientButton
     };
 
     enum class TabMode {
         ImGuiTabs,
         ButtonTabs
+    };
+
+    enum class TabButtonOrientation {
+        HorizontalTop,
+        VerticalLeft
     };
 
     struct Notification {
@@ -91,12 +108,15 @@ namespace ez {
         ElementType type;
         CheckboxStyle styleValue;
         ComboBoxStyle comboStyle;
+        SliderStyle sliderStyle;
+        ButtonStyle buttonStyle;
         std::string label;
         std::vector<std::string> comboItemStorage;                  // string copies
         std::vector<const char*> comboItemPointers;                 // char* pointers. Changed because combo box data was being overwritten when multiple combo boxes existed in the same tabbox.
         std::shared_ptr<std::unordered_map<int, bool>> multiComboData;
         std::vector<const char*> multiComboRawItems;
         std::function<void()> buttonCallback;
+        struct ButtonTag {};
 
         union {
             bool* boolValue;
@@ -108,19 +128,60 @@ namespace ez {
         };
 
         #ifdef USE_EZ_WIDGETS
+            ImU32 text_color;
+            ImU32 bg_color_1;
+            ImU32 bg_color_2;
+
             UIElement(const std::string& lbl, bool* val, CheckboxStyle style = CheckboxStyle::ImGuiDefault)
                 : type(ElementType::Toggle), label(lbl), boolValue(val), styleValue(style) {
             }
             UIElement(const std::string& lbl, bool* val, ImVec4* clr, CheckboxStyle style = CheckboxStyle::ImGuiDefault)
                 : type(ElementType::ToggleColorPicker), label(lbl), boolVal(val), clrVal(clr), styleValue(style) {
             }
+            
+            UIElement(const std::string& lbl, ButtonTag, ImU32 txtClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> callback = nullptr)
+                : type(ElementType::GradientButton), label(lbl), text_color(txtClr), bg_color_1(bgClr1), bg_color_2(bgClr2), buttonCallback(callback) {
+            }
+
+            UIElement(const std::string& lbl, float* val, float mi, float ma, SliderStyle style = SliderStyle::ImGuiDefault)
+                : type(ElementType::SliderFloat), label(lbl), sliderStyle(style)
+            {
+                valueFloat = val;
+                minFloat = mi;
+                maxFloat = ma;
+            }
+
+            UIElement(const std::string& lbl, int* val, int mi, int ma, SliderStyle style = SliderStyle::ImGuiDefault)
+                : type(ElementType::SliderInt), label(lbl), sliderStyle(style)
+            {
+                valueInt = val;
+                minInt = mi;
+                maxInt = ma;
+            }
+
+            //UIElement(const std::string& lbl, ButtonTag, std::function<void()> callback = nullptr, ButtonStyle style = ButtonStyle::ImGuiDefault)
+            //    : type(ElementType::Button), label(lbl), buttonCallback(callback), buttonStyle(style) {
+            //}
         #else
-        UIElement(const std::string& lbl, bool* val)
-            : type(ElementType::Toggle), label(lbl), boolValue(val) {
-        }
-        UIElement(const std::string& lbl, bool* val, ImVec4* clr)
-            : type(ElementType::ToggleColorPicker), label(lbl), boolVal(val), clrVal(clr) {
-        }
+            UIElement(const std::string& lbl, bool* val)
+                : type(ElementType::Toggle), label(lbl), boolValue(val) {
+            }
+            UIElement(const std::string& lbl, bool* val, ImVec4* clr)
+                : type(ElementType::ToggleColorPicker), label(lbl), boolVal(val), clrVal(clr) {
+            }
+
+            UIElement(const std::string& lbl, float* val, float mi, float ma)
+                : type(ElementType::SliderFloat), label(lbl) {
+                valueFloat = val; minFloat = mi; maxFloat = ma;
+            }
+            UIElement(const std::string& lbl, int* val, int mi, int ma)
+                : type(ElementType::SliderInt), label(lbl) {
+                valueInt = val; minInt = mi; maxInt = ma;
+            }
+
+            UIElement(const std::string& lbl, ButtonTag, std::function<void()> callback = nullptr)
+                : type(ElementType::Button), label(lbl), buttonCallback(callback) {
+            }
         #endif
 
 
@@ -156,25 +217,12 @@ namespace ez {
             comboData.items = comboItemPointers.data();
             comboData.itemsCount = static_cast<int>(comboItemPointers.size());
         }
-        UIElement(const std::string& lbl, float* val, float mi, float ma)
-            : type(ElementType::SliderFloat), label(lbl) {
-            valueFloat = val; minFloat = mi; maxFloat = ma;
-        }
-        UIElement(const std::string& lbl, int* val, int mi, int ma)
-            : type(ElementType::SliderInt), label(lbl) {
-            valueInt = val; minInt = mi; maxInt = ma;
-        }
         UIElement(const std::string& lbl, ImVec4* col)
             : type(ElementType::ColorPicker), label(lbl), colorValue(col) {
         }
         UIElement(const std::string& lbl)
             : type(ElementType::Label), label(lbl) {
         }
-        struct ButtonTag {};
-        UIElement(const std::string& lbl, ButtonTag, std::function<void()> callback = nullptr)
-            : type(ElementType::Button), label(lbl), buttonCallback(callback) {
-        }
-
         UIElement(const std::string& lbl, std::initializer_list<const char*> itemsList, std::shared_ptr<std::unordered_map<int, bool>> data)
             : type(ElementType::MultiComboBox), label(lbl), multiComboData(std::move(data)) {
             comboItemStorage.assign(itemsList.begin(), itemsList.end());
@@ -189,16 +237,23 @@ namespace ez {
         std::vector<UIElement> elements;
 
         void AddCheckbox(const char* label, bool* value);
-        void AddCheckbox(const char* label, bool* value, CheckboxStyle style);     // Only used in EzWidgets
+        void AddCheckbox(const char* label, bool* value, CheckboxStyle style);                               // Only used in EzWidgets
         void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color);
         void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style);     // Only used in EzWidgets
+        void AddSlider(const char* label, float* value, float min, float max, SliderStyle style);
+        void AddSlider(const char* label, int* value, int min, int max, SliderStyle style);
         void AddSlider(const char* label, float* value, float min, float max);
         void AddSlider(const char* label, int* value, int min, int max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
         void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
-        void AddButton(const char* label, std::function<void()> onClick = nullptr);
-
+        
+        #ifdef USE_EZ_WIDGETS
+            void AddButton(const char* label, std::function<void()> onClick = nullptr, ButtonStyle style);
+        #else
+            void AddButton(const char* label, std::function<void()> onClick = nullptr);
+        #endif
+        void AddGradientButton(const char* label, ImU32 textClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> onClick = nullptr);
         void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items);
         void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style);     // Only used in EzWidgets
 
@@ -217,15 +272,25 @@ namespace ez {
         void AddCheckbox(const char* label, bool* value, CheckboxStyle style);     // Only used in EzWidgets
         void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color);
         void AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style);     // Only used in EzWidgets
+        void AddSlider(const char* label, float* value, float min, float max, SliderStyle style);
+        void AddSlider(const char* label, int* value, int min, int max, SliderStyle style);
         void AddSlider(const char* label, float* value, float min, float max);
         void AddSlider(const char* label, int* value, int min, int max);
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
         void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
-        void AddButton(const char* label, std::function<void()> onClick = nullptr);
+        
+        #ifdef USE_EZ_WIDGETS // this is a dumb fix
+            void AddButton(const char* label, std::function<void()> onClick = nullptr, ButtonStyle style);
+        #else
+            void AddButton(const char* label, std::function<void()> onClick = nullptr);
+        #endif
 
+        void AddGradientButton(const char* label, ImU32 textClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> onClick = nullptr);
         void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
         void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style);     // Only used in EzWidgets
+
+
 
         void RenderExtras();
     };
@@ -248,6 +313,7 @@ namespace ez {
         ImGuiWindowFlags flags;
         ImGuiStyle& style = ImGui::GetStyle();
         TabMode tabMode = TabMode::ImGuiTabs;
+        TabButtonOrientation tabButtonOrientation = TabButtonOrientation::HorizontalTop;
 
         Window(const char* title_, ImVec2 size_, ImGuiWindowFlags flags_, bool autoshow_);
         std::shared_ptr<Tab> AddTab(const char* name);

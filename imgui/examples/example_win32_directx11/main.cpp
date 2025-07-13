@@ -13,6 +13,7 @@
 #include <tchar.h>
 #include "../ezImgui/ezImgui.h"
 #include <random> // not needed by default
+#include "../../../ezWidgets/ezWidgets.h"
 //#include "../../../../../Downloads/font_array.h"
 
 // Data
@@ -157,6 +158,7 @@ int main(int, char**)
 
         auto myWindow = ez::CreateEzWindow("Test Window", ImVec2(510, 500), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse, true);
         myWindow->tabMode = ez::TabMode::ButtonTabs;
+        myWindow->tabButtonOrientation = ez::TabButtonOrientation::HorizontalTop;
         myWindow->style.ScrollbarSize = 1.3f;
         auto tab1 = myWindow->AddTab("First");
         auto tab2 = myWindow->AddTab("Second");
@@ -165,7 +167,7 @@ int main(int, char**)
         auto settingsTab = myWindow->AddTab("Settings");
 
         auto tabbox1 = tab1->AddTabbox("Tab header 1");
-
+        
         tabbox1->AddCheckbox("Toggle 1", &myToggle);
         tabbox1->AddCheckbox("Toggle 2", &myToggle2);
         tabbox1->AddCheckbox("Toggle 3", &myToggle3);
@@ -179,11 +181,22 @@ int main(int, char**)
             int randNum = getRandomInRange(-100, 100);
             ez::PushNotification("[SYSTEM] Config " + std::to_string(randNum) + " saved!");
 
-            });
+        });
+
+        //tabbox2->AddGradientButton("Test", IM_COL32(255, 255, 255, 255), IM_COL32(155, 0, 0, 255), IM_COL32(30, 0, 0, 255), [] {
+        //    int randNum = getRandomInRange(-100, 100);
+        //    ez::PushNotification("[SYSTEM] Config " + std::to_string(randNum) + " saved!");
+
+        //    });
+        //tabbox2->AddGradientButton("hi", IM_COL32(255, 255, 255, 255), IM_COL32(155, 0, 0, 255), IM_COL32(30, 0, 0, 255));
         tabbox2->AddComboBox("Combo 1", &myChoice, { "one", "two", "three" }, -1);
         tabbox2->AddComboBox("Combo 22", &myChoice2, { "Choice 1", "Choice 2", "Choice 3" }, -1);
         tabbox2->AddMultiComboBox("Mult Combo", { "Read", "Write", "Execute", "Delete" }, perms);
 
+        auto tabbox1Tab2 = tab2->AddTabbox("Custom Assets", ez::TabboxSide::Left);
+        tabbox1Tab2->AddSlider("Slider Intb", &myIntSlider, 0, 100);
+        tabbox1Tab2->AddSlider("Slider Inta", &myIntSlider, 0, 100);
+        
         auto settingsColorTab = settingsTab->AddTabbox("Menu Colors");
         settingsColorTab->AddColorPicker("Tabbox Border Color", &ez::tbxBorderColor);
         settingsColorTab->AddColorPicker("Content Border Color", &ez::contentFrameBorderBg);
