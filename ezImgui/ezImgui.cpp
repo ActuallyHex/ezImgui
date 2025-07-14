@@ -126,8 +126,7 @@ namespace ez {
         elements.emplace_back(label, current_item, items, height_in_items);
     }
 
-#endif // USE_EZ_WIDGETS
-
+    #endif // USE_EZ_WIDGETS
 
     //=== Shared (common to both configs) ===
 

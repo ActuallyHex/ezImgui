@@ -7,7 +7,7 @@
 #include <variant>
 #include <functional>
 
-#define USE_EZ_WIDGETS
+//#define USE_EZ_WIDGETS
 
 namespace ez {
 
@@ -132,16 +132,17 @@ namespace ez {
             ImU32 bg_color_1;
             ImU32 bg_color_2;
 
+            UIElement(const std::string& lbl, ButtonTag, ImU32 txtClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> callback = nullptr)
+                : type(ElementType::GradientButton), label(lbl), text_color(txtClr), bg_color_1(bgClr1), bg_color_2(bgClr2), buttonCallback(callback) {
+            }
+
             UIElement(const std::string& lbl, bool* val, CheckboxStyle style = CheckboxStyle::ImGuiDefault)
                 : type(ElementType::Toggle), label(lbl), boolValue(val), styleValue(style) {
             }
             UIElement(const std::string& lbl, bool* val, ImVec4* clr, CheckboxStyle style = CheckboxStyle::ImGuiDefault)
                 : type(ElementType::ToggleColorPicker), label(lbl), boolVal(val), clrVal(clr), styleValue(style) {
             }
-            
-            UIElement(const std::string& lbl, ButtonTag, ImU32 txtClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> callback = nullptr)
-                : type(ElementType::GradientButton), label(lbl), text_color(txtClr), bg_color_1(bgClr1), bg_color_2(bgClr2), buttonCallback(callback) {
-            }
+           
 
             UIElement(const std::string& lbl, float* val, float mi, float ma, SliderStyle style = SliderStyle::ImGuiDefault)
                 : type(ElementType::SliderFloat), label(lbl), sliderStyle(style)
@@ -177,11 +178,7 @@ namespace ez {
                 valueInt = val; minInt = mi; maxInt = ma;
             }
 
-            UIElement(const std::string& lbl, ButtonTag, std::function<void()> callback = nullptr)
-                : type(ElementType::Button), label(lbl), buttonCallback(callback) {
-            }
         #endif
-
 
         UIElement(const std::string& lbl, int* curval, std::initializer_list<const char*> itemsInitList, int height)
             : type(ElementType::ComboBox), label(lbl) {
