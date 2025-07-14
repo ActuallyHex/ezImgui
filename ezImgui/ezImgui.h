@@ -7,7 +7,7 @@
 #include <variant>
 #include <functional>
 
-//#define USE_EZ_WIDGETS
+#define USE_EZ_WIDGETS
 
 namespace ez {
 
@@ -159,13 +159,11 @@ namespace ez {
                 maxInt = ma;
             }
 
-            //UIElement(const std::string& lbl, ButtonTag, std::function<void()> callback = nullptr, ButtonStyle style = ButtonStyle::ImGuiDefault)
-            //    : type(ElementType::Button), label(lbl), buttonCallback(callback), buttonStyle(style) {
-            //}
         #else
             UIElement(const std::string& lbl, bool* val)
                 : type(ElementType::Toggle), label(lbl), boolValue(val) {
             }
+
             UIElement(const std::string& lbl, bool* val, ImVec4* clr)
                 : type(ElementType::ToggleColorPicker), label(lbl), boolVal(val), clrVal(clr) {
             }
@@ -230,6 +228,10 @@ namespace ez {
             for (const auto& s : comboItemStorage)
                 multiComboRawItems.push_back(s.c_str());
         }
+
+        UIElement(const std::string& lbl, ButtonTag, std::function<void()> callback = nullptr, ButtonStyle style = ButtonStyle::ImGuiDefault)
+             : type(ElementType::Button), label(lbl), buttonCallback(callback), buttonStyle(style) {
+        }
     };
 
     struct TabboxTab {
@@ -247,12 +249,8 @@ namespace ez {
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
         void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
-        
-        #ifdef USE_EZ_WIDGETS
-            void AddButton(const char* label, std::function<void()> onClick = nullptr, ButtonStyle style);
-        #else
-            void AddButton(const char* label, std::function<void()> onClick = nullptr);
-        #endif
+        void AddButton(const char* label, std::function<void()> onClick = nullptr, ButtonStyle style = ButtonStyle::ImGuiDefault);
+
         void AddGradientButton(const char* label, ImU32 textClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> onClick = nullptr);
         void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items);
         void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style);     // Only used in EzWidgets
@@ -279,13 +277,7 @@ namespace ez {
         void AddColorPicker(const char* label, ImVec4* color);
         void AddLabel(const char* label);
         void AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data);
-        
-        #ifdef USE_EZ_WIDGETS // this is a dumb fix
-            void AddButton(const char* label, std::function<void()> onClick = nullptr, ButtonStyle style);
-        #else
-            void AddButton(const char* label, std::function<void()> onClick = nullptr);
-        #endif
-
+        void AddButton(const char* label, std::function<void()> onClick = nullptr, ButtonStyle style = ButtonStyle::ImGuiDefault);
         void AddGradientButton(const char* label, ImU32 textClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> onClick = nullptr);
         void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items = -1);
         void AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style);     // Only used in EzWidgets
