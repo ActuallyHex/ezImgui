@@ -342,7 +342,7 @@ namespace ez {
             switch (e.sliderStyle)
             {
             case SliderStyle::Style1:
-                ezWidgets::SliderStyle1(e.label.c_str(), e.valueFloat, e.minFloat, e.maxFloat, "%d", 0);
+                ezWidgets::SliderStyle1(e.label.c_str(), e.valueFloat, e.minFloat, e.maxFloat, "%.0f", 0);
                 break;
             case SliderStyle::ImGuiDefault:
             default:
