@@ -27,4 +27,6 @@ namespace ezWidgets
     // [SLIDERS]
     bool SliderStyle1(const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags);
     bool SliderStyle1(const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags);
+    bool SliderStyle2(const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags);
+    bool SliderStyle2(const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags);
 }

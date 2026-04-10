@@ -1273,7 +1273,7 @@ struct slider_element
     float opacity;
 };
 
-bool sliderScalar1(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
+static bool sliderScalar1(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -1358,4 +1358,157 @@ bool ezWidgets::SliderStyle1(const char* label, int* v, int v_min, int v_max, co
 bool ezWidgets::SliderStyle1(const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return sliderScalar1(label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags);
+}
+
+static bool sliderScalar2(const char* label, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format, ImGuiSliderFlags flags)
+{
+
+    Spacing();
+    Spacing();
+    Spacing();
+    Spacing();
+    Spacing();
+    Spacing();
+
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    const ImGuiStyle& style = g.Style;
+
+    const ImGuiID id = window->GetID(label);
+    const float w = ImGui::GetContentRegionAvail().x - 6.0f;
+
+    const ImVec2 label_size = ImGui::CalcTextSize(label);
+
+    ImVec2 pos = window->DC.CursorPos;
+
+    ImRect frame_bb(
+        ImVec2(pos.x - 11.0f, pos.y),
+        ImVec2(pos.x + w, pos.y + 6)
+    );
+
+    ImRect total_bb(
+        frame_bb.Min,
+        ImVec2(frame_bb.Max.x + (label_size.x > 0 ? style.ItemInnerSpacing.x + label_size.x : 0.0f),
+            frame_bb.Max.y)
+    );
+
+    ImGui::ItemSize(total_bb, style.FramePadding.y);
+    if (!ImGui::ItemAdd(total_bb, id, &frame_bb))
+        return false;
+
+    if (!format)
+        format = ImGui::DataTypeGetInfo(data_type)->PrintFmt;
+
+    // Interaction
+    const bool hovered = ImGui::ItemHoverable(frame_bb, id, ImGuiItemFlags_None);
+    if (hovered && ImGui::IsMouseClicked(0))
+    {
+        ImGui::SetActiveID(id, window);
+        ImGui::SetFocusID(id, window);
+        ImGui::FocusWindow(window);
+    }
+
+    // Slider behavior
+    ImRect grab_bb;
+    bool value_changed = ImGui::SliderBehavior(
+        frame_bb, id, data_type, v, v_min, v_max, format, flags, &grab_bb
+    );
+
+    if (value_changed)
+        ImGui::MarkItemEdited(id);
+
+    // Animation
+    static float fill = 0.0f;
+    fill = ImClamp(fill + (2.f * ImGui::GetIO().DeltaTime), 0.0f, 1.0f);
+    fill *= style.Alpha;
+
+    ImDrawList* draw = window->DrawList;
+
+    // Background
+    draw->AddRectFilled(
+        ImVec2(frame_bb.Min.x + 13, frame_bb.Min.y),
+        ImVec2(frame_bb.Max.x, frame_bb.Max.y + 4),
+        ImColor(29, 29, 29, int(255 * fill)),
+        style.FrameRounding
+    );
+
+    // Fill
+    float grab_x = ImMax(frame_bb.Min.x + 14, grab_bb.Max.x + 2);
+
+    draw->AddRectFilledMultiColor(
+        ImVec2(frame_bb.Min.x + 15, frame_bb.Min.y + 2),
+        ImVec2(grab_x, frame_bb.Max.y + 2),
+        ImColor(187, 150, 159),
+        ImColor(187, 150, 159),
+        ImColor(131, 107, 113),
+        ImColor(131, 107, 113)
+    );
+
+    // Borders
+    draw->AddRect(
+        ImVec2(frame_bb.Min.x + 14, frame_bb.Min.y + 1),
+        ImVec2(frame_bb.Max.x - 1, frame_bb.Max.y + 3),
+        ImColor(29, 29, 29, int(255 * fill)),
+        style.FrameRounding
+    );
+
+    draw->AddRect(
+        ImVec2(frame_bb.Min.x + 13, frame_bb.Min.y),
+        ImVec2(frame_bb.Max.x, frame_bb.Max.y + 4),
+        ImColor(41, 41, 41, int(255 * fill)),
+        style.FrameRounding
+    );
+
+    // Grab handle
+    float handle_min_x = ImMax(frame_bb.Min.x + 23, grab_bb.Max.x - 2);
+    float handle_max_x = ImMax(frame_bb.Min.x + 17, grab_bb.Max.x + 2);
+
+    draw->AddRectFilled(
+        ImVec2(handle_min_x, frame_bb.Min.y),
+        ImVec2(handle_max_x, frame_bb.Max.y + 4),
+        ImColor(160, 160, 160, int(255 * fill)),
+        style.FrameRounding
+    );
+
+    draw->AddRect(
+        ImVec2(handle_min_x - 1, frame_bb.Min.y - 1),
+        ImVec2(handle_max_x + 1, frame_bb.Max.y + 5),
+        ImColor(38, 38, 38, int(255 * fill)),
+        style.FrameRounding
+    );
+
+    // Value text
+    char value_buf[64];
+    ImGui::DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, v, format);
+
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.8f, fill));
+    ImGui::RenderText(
+        ImVec2(frame_bb.Max.x - 141, frame_bb.Min.y - g.FontSize - 2),
+        value_buf
+    );
+    ImGui::PopStyleColor();
+
+    // Label
+    if (label_size.x > 0.0f)
+    {
+        ImGui::RenderText(
+            ImVec2(frame_bb.Min.x + 13, frame_bb.Min.y - g.FontSize - 2),
+            label
+        );
+    }
+
+    return value_changed;
+}
+
+bool ezWidgets::SliderStyle2(const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
+{
+    return sliderScalar2(label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags);
+}
+
+bool ezWidgets::SliderStyle2(const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
+{
+    return sliderScalar2(label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags);
 }

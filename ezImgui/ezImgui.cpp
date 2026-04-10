@@ -1,191 +1,487 @@
 #include "ezImgui.h"
 #include <imgui_internal.h>
 
-#ifdef USE_EZ_WIDGETS
-#include "../ezWidgets/ezWidgets.h"
-#endif
-
-// W.I.P List
-// 1. replace shared_ptr with vector<T> or unique_ptr
-//    vector<T> might improve performance?
-//    as it is right now the wrapper isnt very performance or thread safe
-// 2. (maybe) Add way to pushfont tabboxes and its contents
-// 3. More drawlist features (animations, styles, etc.)
-
 namespace ez {
 
     //=================================================================================================
-    // Globals
+    // Helpers - Helps build a UIElement with a pre-bound render delegate
     //=================================================================================================
-    static CheckboxStyle g_CheckboxMode = CheckboxStyle::ImGuiDefault;
+
+    // Push a fully constructed UIElement onto any vector<UIElement>
+    // The caller fills in type, renderFn, and heightHint then passes ownership here
+    static void PushElement(std::vector<UIElement>& vec, UIElement e) {
+        vec.push_back(std::move(e));
+    }
+
+    // Build a checkbox element resolving the style to a concrete renderFn right here
+    static UIElement MakeCheckbox(const char* label, bool* value, CheckboxStyle style) {
+        UIElement e;
+        e.type = ElementType::Toggle;
+        e.heightHint = 1.35f;
+
+        std::string lbl = label; // captured by value so the lambda is self-contained
+        switch (style) {
+#ifdef USE_EZ_WIDGETS
+        case CheckboxStyle::ToggleSwitch:
+            e.renderFn = [lbl, value]() { ezWidgets::ToggleSwitch(lbl.c_str(), value); };
+            break;
+        case CheckboxStyle::Anim1:
+            e.renderFn = [lbl, value]() { ezWidgets::CheckboxAnim1(lbl.c_str(), value); };
+            break;
+        case CheckboxStyle::Anim2:
+            e.renderFn = [lbl, value]() { ezWidgets::CheckboxAnim2(lbl.c_str(), value); };
+            break;
+#endif
+        case CheckboxStyle::ImGuiDefault:
+        default:
+            e.renderFn = [lbl, value]() { ImGui::Checkbox(lbl.c_str(), value); };
+            break;
+        }
+        return e;
+    }
+
+    // Build a checkbox + color picker element
+    static UIElement MakeCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style) {
+        UIElement e;
+        e.type = ElementType::ToggleColorPicker;
+        e.heightHint = 1.35f;
+
+        std::string lbl = label;
+        switch (style) {
+#ifdef USE_EZ_WIDGETS
+        case CheckboxStyle::ToggleSwitch:
+            e.renderFn = [lbl, value, color]() {
+                ezWidgets::ToggleSwitch(lbl.c_str(), value);
+                float fullWidth = ImGui::GetContentRegionAvail().x;
+                ImGui::SameLine(ImGui::GetCursorPosX() + fullWidth - 25.0f);
+                ImGui::ColorEdit4(("##" + lbl).c_str(), (float*)color,
+                    ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+                };
+            break;
+        case CheckboxStyle::Anim1:
+            e.renderFn = [lbl, value, color]() {
+                ezWidgets::CheckboxAnim1(lbl.c_str(), value);
+                float fullWidth = ImGui::GetContentRegionAvail().x;
+                ImGui::SameLine(ImGui::GetCursorPosX() + fullWidth - 25.0f);
+                ImGui::ColorEdit4(("##" + lbl).c_str(), (float*)color,
+                    ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+                };
+            break;
+        case CheckboxStyle::Anim2:
+            e.renderFn = [lbl, value, color]() {
+                ezWidgets::CheckboxAnim2(lbl.c_str(), value);
+                float fullWidth = ImGui::GetContentRegionAvail().x;
+                ImGui::SameLine(ImGui::GetCursorPosX() + fullWidth - 25.0f);
+                ImGui::ColorEdit4(("##" + lbl).c_str(), (float*)color,
+                    ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+                };
+            break;
+#endif
+        case CheckboxStyle::ImGuiDefault:
+        default:
+            e.renderFn = [lbl, value, color]() {
+                ImGui::Checkbox(lbl.c_str(), value);
+                float fullWidth = ImGui::GetContentRegionAvail().x;
+                ImGui::SameLine(ImGui::GetCursorPosX() + fullWidth - 25.0f);
+                ImGui::ColorEdit4(("##" + lbl).c_str(), (float*)color,
+                    ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+                };
+            break;
+        }
+        return e;
+    }
+
+    // Build a float slider element
+    static UIElement MakeSliderFloat(const char* label, float* value, float min, float max, SliderStyle style) {
+        UIElement e;
+        e.type = ElementType::SliderFloat;
+        std::string lbl = label;
+
+        switch (style) {
+#ifdef USE_EZ_WIDGETS
+        case SliderStyle::Style1:
+            e.heightHint = 1.90f;
+            e.renderFn = [lbl, value, min, max]() {
+                ezWidgets::SliderStyle1(lbl.c_str(), value, min, max, "%.0f", 0);
+                };
+            break;
+        case SliderStyle::Style2:
+            e.heightHint = 1.90f;
+            e.renderFn = [lbl, value, min, max]() {
+                ezWidgets::SliderStyle2(lbl.c_str(), value, min, max, "%.0f", 0);
+                };
+            break;
+#endif
+        case SliderStyle::ImGuiDefault:
+        default:
+            e.heightHint = 1.35f;
+            e.renderFn = [lbl, value, min, max]() {
+                ImGui::SliderFloat(lbl.c_str(), value, min, max);
+                };
+            break;
+        }
+        return e;
+    }
+
+    // Build an int slider element
+    static UIElement MakeSliderInt(const char* label, int* value, int min, int max, SliderStyle style) {
+        UIElement e;
+        e.type = ElementType::SliderInt;
+        std::string lbl = label;
+
+        switch (style) {
+#ifdef USE_EZ_WIDGETS
+        case SliderStyle::Style1:
+            e.heightHint = 1.90f;
+            e.renderFn = [lbl, value, min, max]() {
+                ezWidgets::SliderStyle1(lbl.c_str(), value, min, max, "%d", 0);
+                ImGui::Dummy(ImVec2(0.0f, 4.f));
+                };
+            break;
+        case SliderStyle::Style2:
+            e.heightHint = 1.00f;
+            e.renderFn = [lbl, value, min, max]() {
+                ezWidgets::SliderStyle2(lbl.c_str(), value, min, max, "%d", 0);
+                ImGui::Dummy(ImVec2(0.0f, 4.f));
+                };
+            break;
+#endif
+        case SliderStyle::ImGuiDefault:
+        default:
+            e.heightHint = 1.35f;
+            e.renderFn = [lbl, value, min, max]() {
+                ImGui::SliderInt(lbl.c_str(), value, min, max);
+                };
+            break;
+        }
+        return e;
+    }
+
+    // Build a button element
+    static UIElement MakeButton(const char* label, std::function<void()> onClick, ButtonStyle style) {
+        UIElement e;
+        e.type = ElementType::Button;
+        e.heightHint = 1.35f;
+        std::string lbl = label;
+
+        switch (style) {
+#ifdef USE_EZ_WIDGETS
+        case ButtonStyle::Style1:
+            e.renderFn = [lbl, onClick]() {
+                if (ezWidgets::IconButton1(lbl.c_str(), ImVec2(-FLT_MIN, 0.0f), false) && onClick)
+                    onClick();
+                };
+            break;
+#endif
+        case ButtonStyle::ImGuiDefault:
+        default:
+            e.renderFn = [lbl, onClick]() {
+                if (ImGui::Button(lbl.c_str(), ImVec2(-FLT_MIN, 0.0f)) && onClick)
+                    onClick();
+                };
+            break;
+        }
+        return e;
+    }
+
+    // Build a gradient button element (EzWidgets only; no-op otherwise)
+    static UIElement MakeGradientButton(const char* label, ImU32 textClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> onClick) {
+        UIElement e;
+        e.type = ElementType::GradientButton;
+        e.heightHint = 1.20f;
+        std::string lbl = label;
+
+#ifdef USE_EZ_WIDGETS
+        e.renderFn = [lbl, textClr, bgClr1, bgClr2, onClick]() {
+            if (ezWidgets::ColoredButtonV1(lbl.c_str(), ImVec2(-FLT_MIN, 0.0f), textClr, bgClr1, bgClr2) && onClick)
+                onClick();
+            };
+#else
+        e.renderFn = []() {}; // no-op when EzWidgets is absent
+#endif
+
+        return e;
+    }
+
+    // Build a combo box element, owning its own item storage.
+    static UIElement MakeComboBox(const char* label, int* currentItem,
+        std::initializer_list<const char*> itemsInitList,
+        int heightInItems, ComboBoxStyle style)
+    {
+        UIElement e;
+        e.type = ElementType::ComboBox;
+        e.heightHint = 1.35f;
+
+        // String storage and pointer list are kept in shared_ptrs so they have a stable heap address regardless of how the UIElement vector reallocates
+        // Capturing raw pointers into e.comboItemStorage/e.comboItemPointers would dangle after the first vector reallocation
+        auto itemStorage = std::make_shared<std::vector<std::string>>();
+        auto itemPointers = std::make_shared<std::vector<const char*>>();
+
+        for (const auto& s : itemsInitList)
+            itemStorage->emplace_back(s);
+        for (const auto& str : *itemStorage)
+            itemPointers->push_back(str.c_str());
+
+        // Also keep copies on the element itself so callers that inspect the element directly still work
+        e.comboItemStorage = *itemStorage;
+        e.comboItemPointers = *itemPointers;
+
+        std::string lbl = label;
+        int         itemsCount = static_cast<int>(itemPointers->size());
+
+        switch (style) {
+#ifdef USE_EZ_WIDGETS
+        case ComboBoxStyle::Style1:
+            // itemStorage must be captured alongside itemPointers: itemPointers holds
+            // const char* into the std::strings owned by itemStorage, so if itemStorage
+            // is destroyed those pointers dangle even though itemPointers itself survives
+            e.renderFn = [lbl, currentItem, itemStorage, itemPointers, itemsCount, heightInItems]() {
+                ezWidgets::comboBoxHelper1(lbl.c_str(), currentItem,
+                    itemPointers->data(), itemsCount, heightInItems);
+                };
+            break;
+#endif
+        case ComboBoxStyle::ImGuiDefault:
+        default:
+            e.renderFn = [lbl, currentItem, itemStorage, itemPointers, itemsCount]() {
+                const char* preview = nullptr;
+                if (currentItem && *currentItem >= 0 && *currentItem < itemsCount)
+                    preview = (*itemPointers)[*currentItem];
+                if (ImGui::BeginCombo(lbl.c_str(), preview, 0)) {
+                    for (int n = 0; n < itemsCount; n++) {
+                        const bool selected = (*currentItem == n);
+                        if (ImGui::Selectable((*itemPointers)[n], selected))
+                            *currentItem = n;
+                        if (selected)
+                            ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+                };
+            break;
+        }
+        return e;
+    }
+
+    // Build a multi combo box element
+    static UIElement MakeMultiComboBox(const char* label,
+        std::initializer_list<const char*> itemsList,
+        std::shared_ptr<std::unordered_map<int, bool>> data)
+    {
+        UIElement e;
+        e.type = ElementType::MultiComboBox;
+        e.heightHint = 1.35f;
+        e.multiComboData = std::move(data);
+
+        // Same stable-address fix as MakeComboBox: keep the pointer list in a
+        // shared_ptr so the lambda capture is never invalidated by a vector realloc
+        auto itemStorage = std::make_shared<std::vector<std::string>>(itemsList.begin(), itemsList.end());
+        auto itemPointers = std::make_shared<std::vector<const char*>>();
+        itemPointers->reserve(itemStorage->size());
+        for (const auto& s : *itemStorage)
+            itemPointers->push_back(s.c_str());
+
+        // Mirror onto the element for any external inspection
+        e.comboItemStorage = *itemStorage;
+        e.multiComboRawItems = *itemPointers;
+
+        std::string lbl = label;
+        auto* dataPtr = e.multiComboData.get();
+
+        e.renderFn = [lbl, dataPtr, itemStorage, itemPointers]() {
+            ImGuiMultiComboBox(lbl.c_str(), dataPtr, *itemPointers);
+            };
+        return e;
+    }
+
+    // Build a standalone color picker element
+    static UIElement MakeColorPicker(const char* label, ImVec4* color) {
+        UIElement e;
+        e.type = ElementType::ColorPicker;
+        e.heightHint = 1.42f;
+        std::string lbl = label;
+        e.renderFn = [lbl, color]() {
+            ImGui::ColorEdit4(lbl.c_str(), (float*)color, ImGuiColorEditFlags_NoInputs);
+            };
+        return e;
+    }
+
+    // Build a text label element
+    static UIElement MakeLabel(const char* label) {
+        UIElement e;
+        e.type = ElementType::Label;
+        e.heightHint = 0.6f;
+        std::string lbl = label;
+        e.renderFn = [lbl]() { ImGui::Text("%s", lbl.c_str()); };
+        return e;
+    }
+
+    // Build an outlined text element
+    // The renderFn resolves the draw list at call-time (not build-time) so it always writes into whichever window is active when Render() fires
+    static UIElement MakeTextWithOutline(const char* text,
+        ImU32        fillColor,
+        ImU32        outlineColor,
+        float        outlineThickness,
+        ImFont* font,
+        float        fontSize,
+        bool         cpuFineAA)
+    {
+        UIElement e;
+        e.type = ElementType::Label; // same height behaviour as a plain label
+        e.heightHint = 1.0f;
+
+        std::string txt = text;
+
+        e.renderFn = [txt, fillColor, outlineColor, outlineThickness,
+            font, fontSize, cpuFineAA]()
+            {
+                // GetCursorScreenPos gives the correct top-left for the current layout position matching where ImGui::Text would place itself
+                ImVec2 pos = ImGui::GetCursorScreenPos();
+
+                // Resolve font/size here so any font pushed after build-time is respected (if the caller pushes a font before Render())
+                ImFont* resolvedFont = font ? font : ImGui::GetFont();
+                float   resolvedFontSize = fontSize > 0.0f ? fontSize : resolvedFont->FontSize;
+
+                AddTextWithOutline(
+                    ImGui::GetWindowDrawList(),
+                    resolvedFont,
+                    resolvedFontSize,
+                    pos,
+                    fillColor,
+                    outlineColor,
+                    txt.c_str(),
+                    outlineThickness,
+                    0.0f,      // wrapWidth: no wrap by default inside a tabbox
+                    cpuFineAA
+                );
+
+                // Advance the layout cursor by the same amount ImGui::Text would so subsequent elements position correctly beneath this one
+                ImVec2 textSize = resolvedFont->CalcTextSizeA(
+                    resolvedFontSize, FLT_MAX, 0.0f, txt.c_str());
+                ImGui::Dummy(textSize);
+            };
+
+        return e;
+    }
 
     //=================================================================================================
-    // Function Definitions
+    // TabboxTab Add* methods
+    // Each method delegates to the corresponding Make* helper above and pushes the resulting element
+    // *No style logic lives here
     //=================================================================================================
-    #ifdef USE_EZ_WIDGETS
 
-    //=== TabboxTab methods ===
     void TabboxTab::AddCheckbox(const char* label, bool* value, CheckboxStyle style) {
-        elements.emplace_back(label, value, style);
-    }
-
-    void TabboxTab::AddCheckbox(const char* label, bool* value) {
-        elements.emplace_back(label, value, CheckboxStyle::ImGuiDefault);
-    }
-
-    void TabboxTab::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style) {
-        elements.emplace_back(label, current_item, items, height_in_items, style);
-    }
-
-    void TabboxTab::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
-        elements.emplace_back(label, current_item, items, height_in_items, ComboBoxStyle::ImGuiDefault);
+        elements.push_back(MakeCheckbox(label, value, style));
     }
 
     void TabboxTab::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style) {
-        elements.emplace_back(label, value, color, style);
-    }
-
-    void TabboxTab::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color) {
-        elements.emplace_back(label, value, color, CheckboxStyle::ImGuiDefault);
-    }
-
-    void TabboxTab::AddGradientButton(const char* label, ImU32 textClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> onClick) {
-        elements.emplace_back(label, UIElement::ButtonTag{}, textClr, bgClr1, bgClr2, onClick);
+        elements.push_back(MakeCheckboxColorPicker(label, value, color, style));
     }
 
     void TabboxTab::AddSlider(const char* label, float* value, float min, float max, SliderStyle style) {
-        elements.emplace_back(label, value, min, max, style);
+        elements.push_back(MakeSliderFloat(label, value, min, max, style));
     }
 
     void TabboxTab::AddSlider(const char* label, int* value, int min, int max, SliderStyle style) {
-        elements.emplace_back(label, value, min, max, style);
-    }
-
-    //=== Tabbox methods ===
-    void Tabbox::AddCheckbox(const char* label, bool* value) {
-        elements.emplace_back(label, value, CheckboxStyle::ImGuiDefault);
-    }
-
-    void Tabbox::AddCheckbox(const char* label, bool* value, CheckboxStyle style) {
-        elements.emplace_back(label, value, style);
-    }
-
-    void Tabbox::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items, ComboBoxStyle style) {
-        elements.emplace_back(label, current_item, items, height_in_items, style);
-    }
-
-    void Tabbox::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
-        elements.emplace_back(label, current_item, items, height_in_items, ComboBoxStyle::ImGuiDefault);
-    }
-
-    void Tabbox::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style) {
-        elements.emplace_back(label, value, color, style);
-    }
-
-    void Tabbox::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color) {
-        elements.emplace_back(label, value, color, CheckboxStyle::ImGuiDefault);
-    }
-
-    void Tabbox::AddGradientButton(const char* label, ImU32 textClr, ImU32 bgClr1, ImU32 bgClr2, std::function<void()> onClick) {
-        elements.emplace_back(label, UIElement::ButtonTag{}, textClr, bgClr1, bgClr2, onClick);
-    }
-
-    void Tabbox::AddSlider(const char* label, float* value, float min, float max, SliderStyle style) {
-        elements.emplace_back(label, value, min, max, style);
-    }
-
-    void Tabbox::AddSlider(const char* label, int* value, int min, int max, SliderStyle style) {
-        elements.emplace_back(label, value, min, max, style);
-    }
-
-    #else
-
-    //=== TabboxTab methods ===
-    void TabboxTab::AddCheckbox(const char* label, bool* value) {
-        elements.emplace_back(label, value);
-    }
-
-    void TabboxTab::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color) {
-        elements.emplace_back(label, value, color);
-    }
-
-    void TabboxTab::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
-        elements.emplace_back(label, current_item, items, height_in_items);
-    }
-
-    //=== Tabbox methods ===
-    void Tabbox::AddCheckbox(const char* label, bool* value) {
-        elements.emplace_back(label, value);
-    }
-
-    void Tabbox::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color) {
-        elements.emplace_back(label, value, color);
-    }
-
-    void Tabbox::AddComboBox(const char* label, int* current_item, std::initializer_list<const char*> items, int height_in_items) {
-        elements.emplace_back(label, current_item, items, height_in_items);
-    }
-
-    #endif // USE_EZ_WIDGETS
-
-    //=== Shared (common to both configs) ===
-
-    // TabboxTab shared
-    void TabboxTab::AddSlider(const char* label, float* value, float min, float max) {
-        elements.emplace_back(label, value, min, max);
-    }
-
-    void TabboxTab::AddSlider(const char* label, int* value, int min, int max) {
-        elements.emplace_back(label, value, min, max);
-    }
-
-    void TabboxTab::AddButton(const char* label, std::function<void()> onClick, ButtonStyle style) {
-        #ifdef USE_EZ_WIDGETS
-            elements.emplace_back(label, UIElement::ButtonTag{}, onClick, style);
-        #else
-            elements.emplace_back(label, UIElement::ButtonTag{}, onClick);
-        #endif
+        elements.push_back(MakeSliderInt(label, value, min, max, style));
     }
 
     void TabboxTab::AddColorPicker(const char* label, ImVec4* color) {
-        elements.emplace_back(label, color);
+        elements.push_back(MakeColorPicker(label, color));
     }
 
     void TabboxTab::AddLabel(const char* label) {
-        elements.emplace_back(label);
+        elements.push_back(MakeLabel(label));
     }
 
-    void TabboxTab::AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data) {
-        elements.emplace_back(label, items, data);
+    void TabboxTab::AddTextWithOutline(const char* text, ImU32 fillColor, ImU32 outlineColor,
+        float outlineThickness, ImFont* font, float fontSize,
+        bool cpuFineAA)
+    {
+        elements.push_back(MakeTextWithOutline(text, fillColor, outlineColor,
+            outlineThickness, font, fontSize, cpuFineAA));
     }
 
-    // Tabbox shared
-    void Tabbox::AddSlider(const char* label, float* value, float min, float max) {
-        elements.emplace_back(label, value, min, max);
+    void TabboxTab::AddMultiComboBox(const char* label, std::initializer_list<const char*> items,
+        std::shared_ptr<std::unordered_map<int, bool>> data)
+    {
+        elements.push_back(MakeMultiComboBox(label, items, std::move(data)));
     }
 
-    void Tabbox::AddSlider(const char* label, int* value, int min, int max) {
-        elements.emplace_back(label, value, min, max);
+    void TabboxTab::AddButton(const char* label, std::function<void()> onClick, ButtonStyle style) {
+        elements.push_back(MakeButton(label, std::move(onClick), style));
     }
 
-    void Tabbox::AddButton(const char* label, std::function<void()> onClick, ButtonStyle style) {
-        #ifdef USE_EZ_WIDGETS
-            elements.emplace_back(label, UIElement::ButtonTag{}, onClick, style);
-        #else
-            elements.emplace_back(label, UIElement::ButtonTag{}, onClick);
-        #endif
+    void TabboxTab::AddGradientButton(const char* label, ImU32 textClr, ImU32 bgClr1, ImU32 bgClr2,
+        std::function<void()> onClick)
+    {
+        elements.push_back(MakeGradientButton(label, textClr, bgClr1, bgClr2, std::move(onClick)));
+    }
+
+    void TabboxTab::AddComboBox(const char* label, int* current_item,
+        std::initializer_list<const char*> items,
+        int height_in_items, ComboBoxStyle style)
+    {
+        elements.push_back(MakeComboBox(label, current_item, items, height_in_items, style));
+    }
+
+    //=================================================================================================
+    // Tabbox Add* methods
+    //=================================================================================================
+
+    void Tabbox::AddCheckbox(const char* label, bool* value, CheckboxStyle style) {
+        elements.push_back(MakeCheckbox(label, value, style));
+    }
+
+    void Tabbox::AddCheckboxColorPicker(const char* label, bool* value, ImVec4* color, CheckboxStyle style) {
+        elements.push_back(MakeCheckboxColorPicker(label, value, color, style));
+    }
+
+    void Tabbox::AddSlider(const char* label, float* value, float min, float max, SliderStyle style) {
+        elements.push_back(MakeSliderFloat(label, value, min, max, style));
+    }
+
+    void Tabbox::AddSlider(const char* label, int* value, int min, int max, SliderStyle style) {
+        elements.push_back(MakeSliderInt(label, value, min, max, style));
     }
 
     void Tabbox::AddColorPicker(const char* label, ImVec4* color) {
-        elements.emplace_back(label, color);
+        elements.push_back(MakeColorPicker(label, color));
     }
 
     void Tabbox::AddLabel(const char* label) {
-        elements.emplace_back(label);
+        elements.push_back(MakeLabel(label));
     }
 
-    void Tabbox::AddMultiComboBox(const char* label, std::initializer_list<const char*> items, std::shared_ptr<std::unordered_map<int, bool>> data) {
-        elements.emplace_back(label, items, data);
+    void Tabbox::AddTextWithOutline(const char* text, ImU32 fillColor, ImU32 outlineColor,
+        float outlineThickness, ImFont* font, float fontSize,
+        bool cpuFineAA)
+    {
+        elements.push_back(MakeTextWithOutline(text, fillColor, outlineColor,
+            outlineThickness, font, fontSize, cpuFineAA));
+    }
+
+    void Tabbox::AddMultiComboBox(const char* label, std::initializer_list<const char*> items,
+        std::shared_ptr<std::unordered_map<int, bool>> data)
+    {
+        elements.push_back(MakeMultiComboBox(label, items, std::move(data)));
+    }
+
+    void Tabbox::AddButton(const char* label, std::function<void()> onClick, ButtonStyle style) {
+        elements.push_back(MakeButton(label, std::move(onClick), style));
+    }
+
+    void Tabbox::AddGradientButton(const char* label, ImU32 textClr, ImU32 bgClr1, ImU32 bgClr2,
+        std::function<void()> onClick)
+    {
+        elements.push_back(MakeGradientButton(label, textClr, bgClr1, bgClr2, std::move(onClick)));
+    }
+
+    void Tabbox::AddComboBox(const char* label, int* current_item,
+        std::initializer_list<const char*> items,
+        int height_in_items, ComboBoxStyle style)
+    {
+        elements.push_back(MakeComboBox(label, current_item, items, height_in_items, style));
     }
 
     //=================================================================================================
@@ -195,29 +491,25 @@ namespace ez {
         g_Notifications.push_back(Notification{ text, duration, 0.0f, -200.0f, 1.0f });
     }
 
-    void ez::RenderNotifications() {
+    void RenderNotifications() {
         ImGuiIO& io = ImGui::GetIO();
         ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
         const float padding = 10.0f;
-        const float line_height = 20.0f;
         const float box_rounding = 0.0f;
 
         int index = 0;
-        for (int i = 0; i < g_Notifications.size(); ) {
+        for (int i = 0; i < (int)g_Notifications.size(); ) {
             Notification& n = g_Notifications[i];
             n.age += io.DeltaTime;
 
-            // Fade out in the last 0.2 seconds
             if (n.lifetime - n.age < 0.5f)
                 n.alpha = ImClamp((n.lifetime - n.age) / 0.2f, 0.0f, 1.0f);
 
-            // Slide-in animation
             if (n.slide < 0.0f) {
                 n.slide = ImLerp(n.slide, 0.0f, ImClamp(io.DeltaTime * 10.0f, 0.0f, 1.0f));
-                if (n.slide > -1.0f) n.slide = 0.0f;  // snap to 0 when almost finished
+                if (n.slide > -1.0f) n.slide = 0.0f;
             }
-            if (n.slide > 0.0f)
-                n.slide = 0.0f;
+            if (n.slide > 0.0f) n.slide = 0.0f;
 
             ImVec2 text_size = ImGui::CalcTextSize(n.text.c_str());
             float box_width = text_size.x + 2 * padding;
@@ -235,18 +527,15 @@ namespace ez {
             ImU32 text_col = ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, n.alpha));
 
             draw_list->AddRectFilled(rect_min, rect_max, bg_col, box_rounding);
-            draw_list->AddRect(ImVec2(rect_outline_min.x - 0.4f, rect_outline_min.y - 0.4f), ImVec2(rect_outline_max.x + 0.4f, rect_outline_max.y + 0.4f), bg_border_col, box_rounding);
+            draw_list->AddRect(ImVec2(rect_outline_min.x - 0.4f, rect_outline_min.y - 0.4f),
+                ImVec2(rect_outline_max.x + 0.4f, rect_outline_max.y + 0.4f),
+                bg_border_col, box_rounding);
             draw_list->AddRect(rect_outline_min, rect_outline_max, border_col, box_rounding);
-
             draw_list->AddText(ImVec2(pos.x + padding, pos.y + padding), text_col, n.text.c_str());
 
-            if (n.age >= n.lifetime) {
+            if (n.age >= n.lifetime)
                 g_Notifications.erase(g_Notifications.begin() + i);
-            }
-            else {
-                ++i;
-                ++index;
-            }
+            else { ++i; ++index; }
         }
     }
 
@@ -305,200 +594,171 @@ namespace ez {
     }
 
     //=================================================================================================
-    // UI Rendering
+    // AddTextWithOutline
+    //
+    // Render the text into a throw-away ImDrawList so we can inspect its
+    // vertex buffer without touching the real draw list yet
+    // 
+    // Walk the resulting quads (4 verts each, 6 indices each) For every quad compute its screen-space centroid then emit a new expanded quad
+    // into the real draw list in the outline color
+    // 
+    // Copy the original fill quads into the real draw list on top
+    //
+    // This produces correct per-glyph outlines in a single merged geometry batch without needing extra font glyphs or modifying the shaders
+    //
     //=================================================================================================
-    void RenderUIElements(const UIElement& e)
+
+    namespace {
+
+        // Unpack an ImU32 color into normalised floats.
+        inline void UnpackColor(ImU32 col, float& r, float& g, float& b, float& a) {
+            r = ((col >> 0) & 0xFF) / 255.0f;
+            g = ((col >> 8) & 0xFF) / 255.0f;
+            b = ((col >> 16) & 0xFF) / 255.0f;
+            a = ((col >> 24) & 0xFF) / 255.0f;
+        }
+
+        // Repack normalised floats back into ImU32.
+        inline ImU32 PackColor(float r, float g, float b, float a) {
+            return IM_COL32(
+                (int)(ImClamp(r, 0.f, 1.f) * 255.f + 0.5f),
+                (int)(ImClamp(g, 0.f, 1.f) * 255.f + 0.5f),
+                (int)(ImClamp(b, 0.f, 1.f) * 255.f + 0.5f),
+                (int)(ImClamp(a, 0.f, 1.f) * 255.f + 0.5f)
+            );
+        }
+
+        // Given four vertex positions forming a glyph quad compute the centroid and push each vertex outward by "amount" pixels
+        // Vertices are assumed in imguis standard order:
+        //   0=top-left  1=top-right  2=bottom-right  3=bottom-left
+        inline void ExpandQuad(const ImVec2 src[4], ImVec2 dst[4], float amount) {
+            ImVec2 c(
+                (src[0].x + src[1].x + src[2].x + src[3].x) * 0.25f,
+                (src[0].y + src[1].y + src[2].y + src[3].y) * 0.25f
+            );
+            for (int i = 0; i < 4; ++i) {
+                ImVec2 dir(src[i].x - c.x, src[i].y - c.y);
+                float  len = ImSqrt(dir.x * dir.x + dir.y * dir.y);
+                if (len > 0.0f) { dir.x /= len; dir.y /= len; }
+                dst[i] = ImVec2(src[i].x + dir.x * amount,
+                    src[i].y + dir.y * amount);
+            }
+        }
+
+        // Emit one quad into drawList using pre-computed positions uvs and color uses PrimReserve + direct write to avoid any hidden reallocation
+        // Winding matches ImGui: triangles {0,1,2} and {0,2,3}
+        inline void EmitQuad(ImDrawList* dl,
+            const ImVec2  pos[4],
+            const ImVec2  uv[4],
+            ImU32         col)
+        {
+            dl->PrimReserve(6, 4);
+
+            ImDrawVert* vtx = dl->_VtxWritePtr;
+            ImDrawIdx* idx = dl->_IdxWritePtr;
+            ImDrawIdx   base = (ImDrawIdx)dl->_VtxCurrentIdx;
+
+            for (int i = 0; i < 4; ++i) {
+                vtx[i].pos = pos[i];
+                vtx[i].uv = uv[i];
+                vtx[i].col = col;
+            }
+
+            idx[0] = base;     idx[1] = base + 1; idx[2] = base + 2;
+            idx[3] = base;     idx[4] = base + 2; idx[5] = base + 3;
+
+            dl->_VtxWritePtr += 4;
+            dl->_IdxWritePtr += 6;
+            dl->_VtxCurrentIdx += 4;
+        }
+
+    } // anon namespace
+
+    void AddTextWithOutline(ImDrawList* drawList,
+        ImFont* font,
+        float        fontSize,
+        ImVec2       pos,
+        ImU32        fillColor,
+        ImU32        outlineColor,
+        const char* text,
+        float        outlineThickness,
+        float        wrapWidth,
+        bool         cpuFineAA)
     {
-        switch (e.type) {
-        case ElementType::Toggle:
-        {
-            #ifdef USE_EZ_WIDGETS
+        if (!text || text[0] == '\0') return;
+        if (!drawList)                  return;
 
-            switch (e.styleValue)
-            {
-            case CheckboxStyle::ToggleSwitch:
-                ezWidgets::ToggleSwitch(e.label.c_str(), e.boolValue);
-                break;
-            case CheckboxStyle::Anim1:
-                ezWidgets::CheckboxAnim1(e.label.c_str(), e.boolValue);
-                break;
-            case CheckboxStyle::Anim2:
-                ezWidgets::CheckboxAnim2(e.label.c_str(), e.boolValue);
-                break;
-            case CheckboxStyle::ImGuiDefault:
-            default:
-                ImGui::Checkbox(e.label.c_str(), e.boolValue);
-                break;
-            }
+        if (!font)            font = ImGui::GetFont();
+        if (fontSize <= 0.0f) fontSize = font->FontSize;
 
-            #else
-            ImGui::Checkbox(e.label.c_str(), e.boolValue);
-            #endif
+        const char* textEnd = text + strlen(text);
+        // capture glyph quads via ImFont::RenderText into a
+        // temporary draw list
 
-            break;
+        // ImFont::RenderText writes directly into whatever draw list you
+        // pass it without touching clip rect state or texture commands so its safe to use with a bare scratch list so this avoids the clip-rect/draw-command ordering issues
+        ImDrawList scratch(drawList->_Data);
+        scratch._ResetForNewFrame();
+
+        // Give the scratch list a large clip rect so nothing is culled
+        // RenderText respects the clip rect in ClipRectStack then we we push our own so every glyph is guaranteed to produce geometry
+        scratch.PushClipRectFullScreen();
+        scratch.PushTextureID(font->ContainerAtlas->TexID);
+
+        // We pass a maximally large clip_rect so nothing is culled here
+        ImVec4 noClip(-8192.f, -8192.f, 8192.f, 8192.f);
+        font->RenderText(&scratch, fontSize, pos, fillColor,
+            noClip, text, textEnd, wrapWidth, false);
+
+        // walk the scratch vertex buffer in strides of 4
+        // ImGui emits exactly 4 verts per visible glyph so whitespace and newlines produce no geometry
+        const int totalVerts = scratch.VtxBuffer.Size;
+        if (totalVerts == 0) return;
+
+        // Sub-pixel alpha softening for thin outlines.
+        ImU32 resolvedOutlineColor = outlineColor;
+        if (cpuFineAA && outlineThickness < 1.5f) {
+            float r, g, b, a;
+            UnpackColor(outlineColor, r, g, b, a);
+            a *= ImClamp(outlineThickness, 0.0f, 1.0f);
+            resolvedOutlineColor = PackColor(r, g, b, a);
         }
-        case ElementType::SliderFloat:
-            #ifdef USE_EZ_WIDGETS
-            switch (e.sliderStyle)
-            {
-            case SliderStyle::Style1:
-                ezWidgets::SliderStyle1(e.label.c_str(), e.valueFloat, e.minFloat, e.maxFloat, "%.0f", 0);
-                break;
-            case SliderStyle::ImGuiDefault:
-            default:
-                ImGui::SliderFloat(e.label.c_str(), e.valueFloat, e.minFloat, e.maxFloat);
-                break;
-            }
-            #else
-            ImGui::SliderFloat(e.label.c_str(), e.valueFloat, e.minFloat, e.maxFloat);
-            #endif
 
-            break;
-        case ElementType::SliderInt:
-            #ifdef USE_EZ_WIDGETS 
-            switch (e.sliderStyle)
-            {
-            case SliderStyle::Style1:
-                ezWidgets::SliderStyle1(e.label.c_str(), e.valueInt, e.minInt, e.maxInt, "%d", 0);
-                ImGui::Dummy(ImVec2(0.0f, 4.f));
-                break;
-            case SliderStyle::ImGuiDefault:
-            default:
-                ImGui::SliderInt(e.label.c_str(), e.valueInt, e.minInt, e.maxInt);
-                break;
-            }
-            #else
-            ImGui::SliderInt(e.label.c_str(), e.valueInt, e.minInt, e.maxInt);
-            #endif
+        // Walk strides of 4 verts one stride = one glyph quad
+        for (int vi = 0; vi + 3 < totalVerts; vi += 4) {
+            const ImDrawVert& v0 = scratch.VtxBuffer[vi + 0]; // top-left
+            const ImDrawVert& v1 = scratch.VtxBuffer[vi + 1]; // top-right
+            const ImDrawVert& v2 = scratch.VtxBuffer[vi + 2]; // bottom-right
+            const ImDrawVert& v3 = scratch.VtxBuffer[vi + 3]; // bottom-left
 
-            break;
-        case ElementType::ColorPicker:
-            ImGui::ColorEdit4(e.label.c_str(), (float*)e.colorValue, ImGuiColorEditFlags_NoInputs);
-            break;
-        case ElementType::ToggleColorPicker:
-        {
-            #ifdef USE_EZ_WIDGETS
-            switch (e.styleValue)
-            {
-            case CheckboxStyle::ToggleSwitch:
-                ezWidgets::ToggleSwitch(e.label.c_str(), e.boolValue);
-                break;
-            case CheckboxStyle::Anim1:
-                ezWidgets::CheckboxAnim1(e.label.c_str(), e.boolValue);
-                break;
-            case CheckboxStyle::Anim2:
-                ezWidgets::CheckboxAnim2(e.label.c_str(), e.boolValue);
-                break;
-            case CheckboxStyle::ImGuiDefault:
-            default:
-                ImGui::Checkbox(e.label.c_str(), e.boolValue);
-                break;
-            }
-            #else
-            ImGui::Checkbox(e.label.c_str(), e.boolVal);
-            #endif
+            ImVec2 srcPos[4] = { v0.pos, v1.pos, v2.pos, v3.pos };
+            ImVec2 uvs[4] = { v0.uv,  v1.uv,  v2.uv,  v3.uv };
 
-            float fullWidth = ImGui::GetContentRegionAvail().x;
-            float colorPickerWidth = 25.0f; // approximate width of color picker (can tweak as needed)
+            // Outline quad first (behind fill)
+            ImVec2 outlinePos[4];
+            ExpandQuad(srcPos, outlinePos, outlineThickness);
+            EmitQuad(drawList, outlinePos, uvs, resolvedOutlineColor);
 
-            ImGui::SameLine(ImGui::GetCursorPosX() + fullWidth - colorPickerWidth);
-            ImGui::ColorEdit4(("##" + e.label).c_str(), (float*)e.clrVal, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
-            break;
-        }
-        case ElementType::MultiComboBox:
-            ImGuiMultiComboBox(e.label.c_str(), e.multiComboData.get(), e.multiComboRawItems);
-            break;
-        case ElementType::Label:
-            ImGui::Text("%s", e.label.c_str());
-            break;
-        case ElementType::Button:
-
-            #ifdef USE_EZ_WIDGETS
-            switch (e.buttonStyle)
-            {
-            case ButtonStyle::Style1:
-                ezWidgets::IconButton1(e.label.c_str(), ImVec2(-FLT_MIN, 0.0f), false);
-                break;
-            case ButtonStyle::ImGuiDefault:
-            default:
-                if (ImGui::Button(e.label.c_str(), ImVec2(-FLT_MIN, 0.0f)) && e.buttonCallback)
-                    e.buttonCallback();
-                break;
-            }
-
-            #else
-            if (ImGui::Button(e.label.c_str(), ImVec2(-FLT_MIN, 0.0f)) && e.buttonCallback)
-                e.buttonCallback();
-            #endif
-
-            break;
-        case ElementType::GradientButton:
-        {
-            #ifdef USE_EZ_WIDGETS
-            if (ezWidgets::ColoredButtonV1(e.label.c_str(), ImVec2(-FLT_MIN, 0.0f), e.text_color, e.bg_color_1, e.bg_color_2) && e.buttonCallback)
-                e.buttonCallback();
-            break;
-
-            #else
-            break;
-            #endif
-        }
-        case ElementType::ComboBox:
-            #ifdef USE_EZ_WIDGETS
-
-            switch (e.comboStyle)
-            {
-            case ComboBoxStyle::Style1:
-                ezWidgets::comboBoxHelper1(e.label.c_str(), e.comboData.currentItem, e.comboData.items, e.comboData.itemsCount, e.comboData.heightInItems);
-                break;
-            case ComboBoxStyle::ImGuiDefault:
-            default:
-                const char* preview_value = nullptr;
-                if (e.comboData.currentItem && *e.comboData.currentItem >= 0 && *e.comboData.currentItem < e.comboData.itemsCount)
-                    preview_value = e.comboData.items[*e.comboData.currentItem];
-
-                if (ImGui::BeginCombo(e.label.c_str(), preview_value, 0))
-                {
-                    for (int n = 0; n < e.comboData.itemsCount; n++)
-                    {
-                        const bool is_selected = (*e.comboData.currentItem == n);
-                        if (ImGui::Selectable(e.comboData.items[n], is_selected))
-                            *e.comboData.currentItem = n;
-
-                        if (is_selected)
-                            ImGui::SetItemDefaultFocus();
-                    }
-                    ImGui::EndCombo();
-                }
-                break;
-            }
-
-            #else
-            const char* preview_value = nullptr;
-            if (e.comboData.currentItem && *e.comboData.currentItem >= 0 && *e.comboData.currentItem < e.comboData.itemsCount)
-                preview_value = e.comboData.items[*e.comboData.currentItem];
-
-            if (ImGui::BeginCombo(e.label.c_str(), preview_value, 0))
-            {
-                for (int n = 0; n < e.comboData.itemsCount; n++)
-                {
-                    const bool is_selected = (*e.comboData.currentItem == n);
-                    if (ImGui::Selectable(e.comboData.items[n], is_selected))
-                        *e.comboData.currentItem = n;
-
-                    if (is_selected)
-                        ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
-            #endif
-
-            break;
+            // Fill quad on top.
+            EmitQuad(drawList, srcPos, uvs, fillColor);
         }
     }
 
     //=================================================================================================
-    // Window and Tabs
+    // Render helpers
+    //=================================================================================================
+    void TabboxTab::Render() {
+        for (auto& e : elements)
+            if (e.renderFn) e.renderFn();
+    }
+
+    void Tabbox::RenderExtras() {
+        for (auto& e : elements)
+            if (e.renderFn) e.renderFn();
+    }
+
+    //=================================================================================================
+    // Window and Tab factory methods
     //=================================================================================================
     Window::Window(const char* title_, ImVec2 size_, ImGuiWindowFlags flags_, bool autoshow_)
         : title(title_), size(size_), flags(flags_), autoshow(autoshow_) {
@@ -532,119 +792,75 @@ namespace ez {
     }
 
     //=================================================================================================
-    // TabboxTab Controls
+    // Window::Render
     //=================================================================================================
-    void TabboxTab::Render() {
-        for (auto& e : elements)
-            RenderUIElements(e);
-    }
-
-    //=================================================================================================
-    // Tabbox Controls
-    //=================================================================================================
-    void Tabbox::RenderExtras() {
-        for (auto& e : elements)
-            RenderUIElements(e);
-    }
-
     void Window::Render() {
 
-        if (center) { // start menu centered
+        if (center) {
             ImVec2 centerPos = ImGui::GetMainViewport()->GetCenter();
             auto tempSize = ImVec2(size.x * 0.5f, size.y * 0.5f);
-            centerPos.x = centerPos.x - tempSize.x;
-            centerPos.y = centerPos.y - tempSize.y;
+            centerPos.x -= tempSize.x;
+            centerPos.y -= tempSize.y;
             ImGui::SetNextWindowPos(centerPos, ImGuiCond_FirstUseEver);
         }
 
         ImGui::SetNextWindowSize(size, ImGuiCond_FirstUseEver);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ez::winBackgroundColor);
         ImGui::Begin(title.c_str(), &isOpen, flags);
+
         static int testBar = 0;
         ImVec2 contentSize;
-
-        //ImGuiWindow* window = ImGui::GetCurrentWindow();
-        //ImVec2 windowPos = window->Pos;
-        //ImVec2 windowSize = window->Size;
-
-        //float rectHeight = 20.0f;  // Height of the top bar
-        //ImU32 color = IM_COL32(255, 0, 0, 255);  // Solid red for example
-
-        //window->DrawList->AddRectFilled(
-        //    windowPos,
-        //    ImVec2(windowPos.x + windowSize.x, windowPos.y + rectHeight),
-        //    color
-        //);
-
 
         if (fonts.contains(currentFontName))
             ImGui::PushFont(fonts[currentFontName]);
 
         ImGui::Spacing();
 
-        if (!tabNames.empty())
-        {
-            if (tabMode == TabMode::ImGuiTabs)
-            {
+        if (!tabNames.empty()) {
+            if (tabMode == TabMode::ImGuiTabs) {
                 contentSize = ImVec2(size.x - 15, size.y - 66);
 
                 if (ImGui::BeginTabBar("##tabs")) {
-                    for (int i = 0; i < tabNames.size(); i++) {
+                    for (int i = 0; i < (int)tabNames.size(); i++) {
                         if (ImGui::BeginTabItem(tabNames[i].c_str())) {
-                            testBar = static_cast<int>(i);
+                            testBar = i;
                             ImGui::EndTabItem();
                         }
                     }
                     ImGui::EndTabBar();
                 }
             }
-            else if (tabMode == TabMode::ButtonTabs)
-            {
+            else if (tabMode == TabMode::ButtonTabs) {
                 float buttonHeight = 30.0f;
 
-                if (tabButtonOrientation == TabButtonOrientation::HorizontalTop)
-                {
+                if (tabButtonOrientation == TabButtonOrientation::HorizontalTop) {
                     ImGui::BeginChild("##ButtonTabBar", ImVec2(0, buttonHeight), false);
                     for (size_t i = 0; i < tabNames.size(); i++) {
                         if (i > 0) ImGui::SameLine();
-
                         ImVec4 normalColor = ImVec4(0.2f, 0.2f, 0.2f, 1);
                         ImVec4 activeColor = ImVec4(0.35f, 0.35f, 0.4f, 1);
-                        ImGui::PushStyleColor(ImGuiCol_Button, testBar == i ? activeColor : normalColor);
-
-                        if (ImGui::Button(tabNames[i].c_str())) {
+                        ImGui::PushStyleColor(ImGuiCol_Button, testBar == (int)i ? activeColor : normalColor);
+                        if (ImGui::Button(tabNames[i].c_str()))
                             testBar = static_cast<int>(i);
-                        }
-
                         ImGui::PopStyleColor();
                     }
                     ImGui::EndChild();
-
                     RenderFullWidthSeparator(1.0f, contentSeperatorColor);
                 }
-                else
-                {
+                else {
                     ImGui::BeginGroup();
-                    for (int i = 0; i < tabNames.size(); ++i) 
-                    {
+                    for (int i = 0; i < (int)tabNames.size(); ++i) {
                         ImVec4 normalColor = ImVec4(0.2f, 0.2f, 0.2f, 1);
                         ImVec4 activeColor = ImVec4(0.35f, 0.35f, 0.4f, 1);
                         ImGui::PushStyleColor(ImGuiCol_Button, testBar == i ? activeColor : normalColor);
-
-                        if (ImGui::Button(tabNames[i].c_str(), ImVec2(55.f, 0.0f))) {
-                            testBar = static_cast<int>(i);
-                        }
-
+                        if (ImGui::Button(tabNames[i].c_str(), ImVec2(55.f, 0.0f)))
+                            testBar = i;
                         ImGui::PopStyleColor();
                     }
                     ImGui::EndGroup();
-
                     ImGui::SameLine();
                 }
-
             }
-
-
         }
 
         currentTab = testBar;
@@ -657,168 +873,97 @@ namespace ez {
 
             for (int sideIndex = 0; sideIndex < 2; ++sideIndex) {
                 TabboxSide currentSide = (sideIndex == 0) ? TabboxSide::Left : TabboxSide::Right;
+
                 for (auto& tabbox : tab->tabboxes) {
-                    if (tabbox->side == currentSide) {
+                    if (tabbox->side != currentSide) continue;
 
-                        int& currentIndex = tabboxStates[tabbox->name];
-                        int visibleIndex = currentIndex;
-                        int elementCount = 0;
-                        if (!tabbox->tabs.empty() && visibleIndex >= 0 && visibleIndex < tabbox->tabs.size()) {
-                            elementCount = static_cast<int>(tabbox->tabs[visibleIndex]->elements.size());
+                    int& currentIndex = tabboxStates[tabbox->name];
+                    int visibleIndex = currentIndex;
+
+                    const std::vector<UIElement>* activeElements = nullptr;
+                    if (!tabbox->tabs.empty() && visibleIndex >= 0 && visibleIndex < (int)tabbox->tabs.size())
+                        activeElements = &tabbox->tabs[visibleIndex]->elements;
+                    else
+                        activeElements = &tabbox->elements;
+
+                    int elementCount = static_cast<int>(activeElements->size());
+
+                    float itemHeight = ImGui::GetFrameHeightWithSpacing();
+                    float headerHeight = ImGui::GetTextLineHeightWithSpacing();
+                    float separatorSpacing = 2 * ImGui::GetStyle().ItemSpacing.y;
+                    float tabButtonRowHeight = 0.0f;
+                    if (!tabbox->tabs.empty())
+                        tabButtonRowHeight = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y * 2.5f;
+
+                    float tabboxHeight = headerHeight + separatorSpacing + tabButtonRowHeight;
+
+                    for (const auto& e : *activeElements) {
+
+                        // Height estimation uses the per-element heightHint set at add-time for multi-element tabboxes a small correction keeps items from clipping
+                        float hint = e.heightHint;
+                        float finalMod = 0.0f;
+                        if (elementCount > 1 && hint > 1.0f) {
+                            finalMod = (float)(elementCount + 1);
+                            finalMod += (hint / (float)elementCount) + 1.0f;
                         }
-                        else 
-                        {
-                            elementCount = static_cast<int>(tabbox->elements.size());
-                        }
+                        tabboxHeight += (itemHeight * hint) - finalMod;
+                    }
 
-                        float itemHeight = ImGui::GetFrameHeightWithSpacing();      // standard height per item
-                        float headerHeight = ImGui::GetTextLineHeightWithSpacing(); // for the tabbox label
+                    if (elementCount == 0)
+                        tabboxHeight += itemHeight * 0.79f;
 
-                        float separatorSpacing = 2 * ImGui::GetStyle().ItemSpacing.y; // 2 separators (top + below tabs)
-                        float tabButtonRowHeight = 0.0f;
+                    // Tabbox style push
+                    ImGui::PushStyleColor(ImGuiCol_ChildBg, ez::tbxBackgroundColor);
+                    ImGui::PushStyleColor(ImGuiCol_Border, ez::tbxBorderColor);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, ez::frameBg);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ez::frameBgActive);
+                    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ez::frameBgHovered);
+                    ImGui::PushStyleColor(ImGuiCol_CheckMark, ez::accentColor);
+                    ImGui::PushStyleColor(ImGuiCol_SliderGrab, ez::accentColor);
+                    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ez::accentColor);
+                    ImGui::PushStyleColor(ImGuiCol_Button, ez::buttonColor);
+                    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, ez::frameRounding);
+                    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, ez::tabboxRounding);
 
-                        if (!tabbox->tabs.empty()) 
-                        {
-                            tabButtonRowHeight = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y * 2.5f;
-                        }
+                    ImGui::BeginChild(tabbox->name.c_str(), ImVec2(0, tabboxHeight), true);
+                    ImGui::Text("%s", tabbox->name.c_str());
+                    RenderFullWidthSeparator(1.0f, tbxBorderColor);
 
-                        float tabboxHeight = headerHeight + separatorSpacing + tabButtonRowHeight;
+                    float buttonWidth = ImGui::GetContentRegionAvail().x / std::max(1, (int)tabbox->tabs.size());
+                    for (int i = 0; i < (int)tabbox->tabs.size(); ++i) {
+                        ImGui::PushID(i);
+                        ImVec4 normalColor = ImVec4(0.2f, 0.2f, 0.2f, 1);
+                        ImVec4 activeColor = ImVec4(0.35f, 0.35f, 0.4f, 1);
+                        ImGui::PushStyleColor(ImGuiCol_Button, currentIndex == i ? activeColor : normalColor);
+                        if (ImGui::Button((tabbox->tabs[i]->name + "##" + tabbox->name).c_str(),
+                            ImVec2(buttonWidth - 4.0f, 0)))
+                            currentIndex = i;
+                        ImGui::PopStyleColor();
+                        if (i < (int)tabbox->tabs.size() - 1)
+                            ImGui::SameLine(0.0f, 4.0f);
+                        ImGui::PopID();
+                    }
 
-                        for (const auto& e : (!tabbox->tabs.empty() && visibleIndex >= 0 && visibleIndex < tabbox->tabs.size())
-                            ? tabbox->tabs[visibleIndex]->elements
-                            : tabbox->elements)
-                        {
-                            switch (e.type)
-                            {
-                            case ElementType::MultiComboBox:
-                            case ElementType::ComboBox:
-                            {
-                                float comboHeight = 1.35;
-                                float finalMod = 0.0f;
-
-                                if (elementCount > 1)
-                                {
-                                    finalMod = (elementCount + 1);
-                                    finalMod += (comboHeight / elementCount) + 1;
-                                }
-
-                                tabboxHeight += (itemHeight * comboHeight) - finalMod;
-                                break;
-                            }
-                            case ElementType::ColorPicker:
-                            {
-                                float clrHeight = 1.42;
-                                float finalMod = 0.0f;
-
-                                if (elementCount > 1)
-                                {
-                                    finalMod = (elementCount + 1);
-                                    finalMod += (clrHeight / elementCount) + 1;
-                                }
-
-                                tabboxHeight += (itemHeight * clrHeight) - finalMod;
-                                break;
-                            }
-                            case ElementType::ToggleColorPicker:
-                            case ElementType::Toggle:
-                            {
-                                float toggleHeight = 1.35;
-                                float finalMod = 0.0f;
-
-                                if (elementCount > 1)
-                                {
-                                    finalMod = (elementCount + 1);
-                                    finalMod += (toggleHeight / elementCount) + 1;               // Is this the best way to get total element height? No absolutely not... but it works.
-                                }
-
-                                tabboxHeight += (itemHeight * toggleHeight) - finalMod;
-
-                                break;
-                            }
-                            case ElementType::Button:
-                                tabboxHeight += itemHeight * 1.20f;
-                                break;
-                            case ElementType::SliderInt:
-                            case ElementType::SliderFloat:
-                            {
-                                if(e.sliderStyle == ez::SliderStyle::Style1)
-                                    tabboxHeight += itemHeight * 1.90f;
-                                else
-                                    tabboxHeight += itemHeight * 0.20f;
-                            }
-
-                            default:
-                                tabboxHeight += itemHeight;
-                                break;
-                            }
-                        }
-
-                        if (elementCount == 0)
-                            tabboxHeight += itemHeight * 0.79f;
-
-                        // [Tabbox Content Colors]
-                        ImGui::PushStyleColor(ImGuiCol_ChildBg, ez::tbxBackgroundColor);
-                        ImGui::PushStyleColor(ImGuiCol_Border, ez::tbxBorderColor);
-                        ImGui::PushStyleColor(ImGuiCol_FrameBg, ez::frameBg);
-                        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ez::frameBgActive);
-                        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ez::frameBgHovered);
-                        ImGui::PushStyleColor(ImGuiCol_CheckMark, ez::accentColor);
-                        ImGui::PushStyleColor(ImGuiCol_SliderGrab, ez::accentColor);
-                        ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ez::accentColor);
-                        ImGui::PushStyleColor(ImGuiCol_Button, ez::buttonColor);
-                        
-                        // [Tabbox Content Styles]
-                        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, ez::frameRounding);
-                        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, ez::tabboxRounding);
-                        ImGui::BeginChild(tabbox->name.c_str(), ImVec2(0, tabboxHeight), true);
-                        ImGui::Text("%s", tabbox->name.c_str());
-
+                    if (!tabbox->tabs.empty())
                         RenderFullWidthSeparator(1.0f, tbxBorderColor);
 
-                        float buttonWidth = ImGui::GetContentRegionAvail().x / std::max(1, (int)tabbox->tabs.size());
-                        for (int i = 0; i < tabbox->tabs.size(); ++i) {
-                            ImGui::PushID(i);
+                    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.f, 0.f, 0.f, 0.f));
+                    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.f, 0.f, 0.f, 0.f));
+                    ImGui::BeginChild(("##ContentFrame_" + tabbox->name).c_str(), ImVec2(-1, 0), ImGuiChildFlags_None);
 
-                            ImVec4 normalColor = ImVec4(0.2f, 0.2f, 0.2f, 1);
-                            ImVec4 activeColor = ImVec4(0.35f, 0.35f, 0.4f, 1);
-                            ImGui::PushStyleColor(ImGuiCol_Button, currentIndex == i ? activeColor : normalColor);
-                           
+                    if (!tabbox->tabs.empty() && currentIndex >= 0 && currentIndex < (int)tabbox->tabs.size())
+                        tabbox->tabs[currentIndex]->Render();
+                    else
+                        tabbox->RenderExtras();
 
-                            bool isSelected = (currentIndex == i);
-                            if (ImGui::Button((tabbox->tabs[i]->name + "##" + tabbox->name).c_str(), ImVec2(buttonWidth - 4.0f, 0))) {
-                                currentIndex = i;
-                            }
+                    ImGui::EndChild();
+                    ImGui::PopStyleColor(2);
 
-                            ImGui::PopStyleColor();
-
-                            if (i < tabbox->tabs.size() - 1)
-                                ImGui::SameLine(0.0f, 4.0f);
-
-                            ImGui::PopID();
-                        }
-
-                        if (!tabbox->tabs.empty())
-                            RenderFullWidthSeparator(1.0f, tbxBorderColor);
-
-                        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.f, 0.f, 0.f, 0.f));
-                        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.f, 0.f, 0.f, 0.f));
-                        if (!tabbox->tabs.empty() && currentIndex >= 0 && currentIndex < tabbox->tabs.size()) {
-                            ImGui::BeginChild(("##ContentFrame_" + tabbox->name).c_str(), ImVec2(-1, 0), ImGuiChildFlags_None);
-                            tabbox->tabs[currentIndex]->Render();
-                            ImGui::EndChild();
-                        }
-                        else {
-                            ImGui::BeginChild(("##ContentFrame_" + tabbox->name).c_str(), ImVec2(-1, 0), ImGuiChildFlags_None);
-                            tabbox->RenderExtras();
-                            ImGui::EndChild();
-                        }
-                        ImGui::PopStyleColor(2);
-
-                        ImGui::EndChild();
-                        ImGui::PopStyleVar(2);
-                        ImGui::PopStyleColor(9);
-                    }
+                    ImGui::EndChild();
+                    ImGui::PopStyleVar(2);
+                    ImGui::PopStyleColor(9);
                 }
+
                 ImGui::NextColumn();
             }
         }
