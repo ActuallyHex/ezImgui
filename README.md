@@ -68,4 +68,11 @@ ez::RenderNotifications();
 myWindow->Render(); // Just like imgui if you create a window you will need to call myWindow->Render(); before ImGui::Render();
 
 ```
+## Examples
+
+<img width="1920" height="1080" alt="Screenshot 2026-04-12 213630" src="https://github.com/user-attachments/assets/46b4d7bc-e6d1-4a35-8a5b-8c1d748e1793" />
+
+<img width="1920" height="1080" alt="Screenshot 2026-04-12 000108" src="https://github.com/user-attachments/assets/69ae9135-ba5c-48ee-9b87-c4afbf30cf95" />
+
 ![Screenshot 2025-07-05 163536](https://github.com/user-attachments/assets/a49a1da4-c034-46d3-b7ce-00e93c2246e0)
+
